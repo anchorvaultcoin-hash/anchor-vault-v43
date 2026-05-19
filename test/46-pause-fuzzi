@@ -1,0 +1,72 @@
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
+const { deployFixture, openSafe, P } = require("./helpers");
+
+describe("AnchorVaultV43 — Pause Fuzzing", function () {
+    it("1. pause → deposit ревертит", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await ancr.connect(alice).approve(await vault.getAddress(), ethers.parseEther("50"));
+        await expect(vault.connect(alice).depositToVault(1, ethers.parseEther("50"), P.code)).to.be.revertedWithCustomError(vault, "ContractPaused");
+    });
+    it("2. pause → withdraw ревертит", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await expect(vault.connect(alice).withdrawFromVault(1, ethers.parseEther("10"), alice.address, P.code, P.antiPhrase)).to.be.revertedWithCustomError(vault, "ContractPaused");
+    });
+    it("3. pause → transfer ревертит", async function () {
+        const { vault, ancr, alice, bob, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await expect(vault.connect(alice).transferVault(1, bob.address, P.code, P.antiPhrase, { newCode: P.newCode, newAntiPhrase: P.newAntiPhrase, newRecovery: P.newRecovery })).to.be.revertedWithCustomError(vault, "ContractPaused");
+    });
+    it("4. pause → openVault ревертит", async function () {
+        const { vault, ancr, alice, guardian, frank } = await loadFixture(deployFixture);
+        await vault.connect(guardian).emergencyPause();
+        await ancr.connect(alice).approve(await vault.getAddress(), ethers.parseEther("100"));
+        const params = { name: "V", code: P.code, antiPhrase: P.antiPhrase, recovery: P.recovery, amount: ethers.parseEther("100"), emergencyAddress: frank.address };
+        await expect(vault.connect(alice).openVault(await ancr.getAddress(), params, 0)).to.be.revertedWithCustomError(vault, "ContractPaused");
+    });
+    it("5. pause → earlyClose работает", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await vault.connect(alice).earlyClose(1, P.recovery);
+        expect((await vault.getVaultCore(alice.address, 1)).status).to.equal(1);
+    });
+    it("6. pause → recoverToSafe работает", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await vault.connect(alice).recoverToSafe(1, P.recovery);
+        expect((await vault.getVaultCore(alice.address, 1)).status).to.equal(1);
+    });
+    it("7. pause → emergencyAny работает", async function () {
+        const { vault, ancr, alice, bob, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await vault.connect(alice).emergencyWithdrawToAny(1, bob.address, P.recovery, P.antiPhrase);
+        expect((await vault.getVaultCore(alice.address, 1)).status).to.equal(1);
+    });
+    it("8. pause → rotateCodes работает", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await vault.connect(alice).rotateCodes(1, P.code, P.recovery, { newCode: P.newCode, newAntiPhrase: P.newAntiPhrase, newRecovery: P.newRecovery });
+    });
+    it("9. pause → changeEmergencyAddress работает", async function () {
+        const { vault, ancr, alice, bob, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { emergencyAddress: bob.address, amount: ethers.parseEther("100") });
+        await vault.connect(guardian).emergencyPause();
+        await vault.connect(alice).changeEmergencyAddress(1, alice.address, P.recovery);
+    });
+    it("10. pause → setTimelock ревертит", async function () {
+        const { vault, ancr, alice, guardian } = await loadFixture(deployFixture);
+        await openSafe(vault, ancr, alice, { level: 1 });
+        await vault.connect(guardian).emergencyPause();
+        await expect(vault.connect(alice).setTimelock(1, 24, P.code)).to.be.revertedWithCustomError(vault, "ContractPaused");
+    });
+});
