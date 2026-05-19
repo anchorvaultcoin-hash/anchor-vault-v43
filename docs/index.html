@@ -1,0 +1,2627 @@
+<!doctype html>
+<html lang="ru">
+<head><link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AnchorVault">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwZjBmMGYiIHN0cm9rZT0iI0Q0QUYzNyIgc3Ryb2tlLXdpZHRoPSIyIi8+PGcgZmlsbD0iI0Q0QUYzNyI+PGNpcmNsZSBjeD0iMzIiIGN5PSIyMCIgcj0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDRBRjM3IiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIzMC41IiB5PSIyNCIgd2lkdGg9IjMiIGhlaWdodD0iMjIiIHJ4PSIxIi8+PHJlY3QgeD0iMjIiIHk9IjMwIiB3aWR0aD0iMjAiIGhlaWdodD0iMi41IiByeD0iMSIvPjxwYXRoIGQ9Ik0xNSA0NCBRMTUgNTQsIDMyIDU0IFE0OSA1NCwgNDkgNDQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Q0QUYzNyIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNSA0NCBMMTEgNDEgTDE3IDQyIFoiLz48cGF0aCBkPSJNNDkgNDQgTDUzIDQxIEw0NyA0MiBaIi8+PC9nPjwvc3ZnPg==">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>AnchorVault V43 — пульт управления</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg:       '#0f0f0f',
+          'bg-2':   '#161616',
+          panel:    '#1a1a1a',
+          'panel-2':'#202020',
+          border:   '#2a2a2a',
+          'border-2':'#3a3a3a',
+          text:     '#e8e8e8',
+          'text-2': '#a0a0a0',
+          'text-3': '#6a6a6a',
+          gold:     '#D4AF37',
+          'gold-2': '#b8941e',
+          warn:     '#FF8C00',
+          success:  '#4ade80',
+          info:     '#5da3d5'
+        },
+        fontFamily: {
+          sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+          mono: ['JetBrains Mono','ui-monospace','SFMono-Regular','monospace']
+        }
+      }
+    }
+  };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  html,body{background:#0f0f0f;color:#e8e8e8;font-family:'Inter',sans-serif;
+    -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+  .mono{font-family:'JetBrains Mono',monospace}
+
+  /* iOS Safari 100dvh — нет скачков при появлении/исчезновении адресной строки */
+  .h-vh{height:100vh;height:100dvh}
+  .min-h-vh{min-height:100vh;min-height:100dvh}
+
+  /* Shimmer-эффект на кнопках */
+  .btn-shimmer{position:relative;overflow:hidden}
+  .btn-shimmer::before{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(120deg,transparent 0%,rgba(212,175,55,.25) 50%,transparent 100%);
+    transform:translateX(-100%);transition:transform .6s ease;pointer-events:none
+  }
+  .btn-shimmer:hover:not(:disabled)::before{transform:translateX(100%)}
+
+  /* спиннер */
+  .spinner{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* подсказка ? — работает и на тач (через tabindex+focus) */
+  .tip{
+    display:inline-flex;width:18px;height:18px;border-radius:50%;
+    align-items:center;justify-content:center;font-size:10px;font-weight:700;
+    background:#202020;border:1px solid #3a3a3a;color:#a0a0a0;cursor:help;
+    position:relative;margin-left:6px;line-height:1;
+    -webkit-user-select:none;user-select:none
+  }
+  .tip:hover,.tip:focus{background:#D4AF37;color:#0f0f0f;border-color:#D4AF37;outline:none}
+  .tip::after{
+    content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;
+    transform:translateX(-50%);background:#1a1a1a;color:#e8e8e8;
+    border:1px solid rgba(212,175,55,.4);padding:9px 12px;border-radius:8px;
+    font-size:12px;font-weight:500;width:max-content;max-width:280px;
+    white-space:normal;text-align:left;pointer-events:none;opacity:0;
+    transition:opacity 150ms;box-shadow:0 12px 32px rgba(0,0,0,.7);z-index:200;line-height:1.4
+  }
+  .tip:hover::after,.tip:focus::after{opacity:1}
+  @media (max-width:600px){.tip::after{left:auto;right:0;transform:none;max-width:calc(100vw - 60px)}}
+  @media (max-width:480px){.tip{width:22px;height:22px;font-size:11px}}
+
+  /* sidebar slide на мобиле */
+  @media (max-width:767px){
+    #sidebar.closed{transform:translateX(-100%)}
+    #sidebar{transition:transform .25s ease}
+  }
+
+  body.modal-open{overflow:hidden}
+
+  /* Тосты */
+  .toast{animation:slideIn .25s ease both}
+  @keyframes slideIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+  /* Меню-элемент */
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+    color:#a0a0a0;font-size:13px;cursor:pointer;transition:all .15s;font-weight:500
+  }
+  .nav-item:hover{background:#1a1a1a;color:#e8e8e8}
+  .nav-item.active{background:rgba(212,175,55,.12);color:#D4AF37;font-weight:600}
+  .nav-item .ico{font-size:16px;width:20px;text-align:center}
+
+  /* Карточки с золотой рамкой */
+  .card{
+    background:#1a1a1a;
+    border:1px solid rgba(212,175,55,.2);
+    border-radius:12px;
+    padding:18px
+  }
+  .card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+  .card-h h2{font-size:14px;font-weight:700;letter-spacing:.02em;color:#e8e8e8}
+
+  /* Инпуты */
+  input,select,textarea{
+    width:100%;background:#0f0f0f;border:1px solid #2a2a2a;color:#e8e8e8;
+    border-radius:8px;padding:10px 12px;font-size:13px;outline:none;transition:.15s;
+    font-family:inherit
+  }
+  input:focus,select:focus,textarea:focus{border-color:#D4AF37;box-shadow:0 0 0 3px rgba(212,175,55,.15)}
+  input::placeholder{color:#6a6a6a}
+  input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
+  label{display:flex;align-items:center;font-size:11px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.04em;color:#a0a0a0;margin-bottom:6px}
+  label .req{color:#FF8C00;margin-left:3px}
+  .hint{font-size:11px;color:#6a6a6a;margin-top:5px}
+  .err-text{font-size:11px;color:#FF8C00;margin-top:5px}
+
+  /* Кнопки */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;
+    cursor:pointer;transition:.15s;border:1px solid #3a3a3a;background:#202020;color:#e8e8e8
+  }
+  .btn:hover:not(:disabled){border-color:#D4AF37;color:#D4AF37}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-gold{
+    background:linear-gradient(135deg,#D4AF37,#b8941e);
+    color:#0f0f0f;border:0;font-weight:700
+  }
+  .btn-gold:hover:not(:disabled){filter:brightness(1.1);color:#0f0f0f}
+  .btn-warn{background:#FF8C00;color:#0f0f0f;border:0;font-weight:700}
+  .btn-warn:hover:not(:disabled){filter:brightness(1.1);color:#0f0f0f}
+  .btn-success{background:#4ade80;color:#0f0f0f;border:0;font-weight:700}
+  .btn-sm{padding:6px 10px;font-size:11px}
+
+  /* Stat-карточка */
+  .stat{padding:12px 14px;background:#0f0f0f;border-radius:10px;border:1px solid #2a2a2a}
+  .stat-label{font-size:10px;color:#6a6a6a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;font-weight:600}
+  .stat-value{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;word-break:break-all;color:#e8e8e8}
+  .stat-value.gold{color:#D4AF37}
+  .stat-value.warn{color:#FF8C00}
+  .stat-value.success{color:#4ade80}
+
+  /* Бейдж */
+  .badge{display:inline-block;padding:2px 9px;border-radius:11px;font-size:10px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .badge-gold{background:rgba(212,175,55,.15);color:#D4AF37}
+  .badge-warn{background:rgba(255,140,0,.15);color:#FF8C00}
+  .badge-success{background:rgba(74,222,128,.15);color:#4ade80}
+  .badge-info{background:rgba(93,163,213,.15);color:#5da3d5}
+  .badge-mute{background:#2a2a2a;color:#a0a0a0}
+
+  /* Полноэкранный модал антифишинга */
+  .ap-bad{position:fixed;inset:0;background:rgba(255,140,0,.92);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+  .ap-bad-inner{background:#0f0f0f;border:2px solid #FF8C00;border-radius:14px;padding:30px;max-width:520px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+
+  /* Eye-кнопка внутри инпута */
+  .eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:14px;color:#6a6a6a;cursor:pointer;background:none;border:0;padding:4px}
+  .eye-btn:hover{color:#D4AF37}
+
+  /* Slider оранжевый */
+  input[type=range]{-webkit-appearance:none;appearance:none;background:#2a2a2a;height:4px;border-radius:2px;padding:0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#D4AF37;border-radius:50%;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;background:#D4AF37;border-radius:50%;cursor:pointer;border:0}
+
+  /* Карточки уровней SAFE/VAULT/FORTRESS */
+  .lvl-card{
+    background:#1a1a1a;border:1px solid #3a3a3a;border-radius:10px;
+    padding:12px 8px;cursor:pointer;transition:all .15s;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-family:inherit;color:#a0a0a0;text-align:center;
+  }
+  .lvl-card:hover{transform:translateY(-1px)}
+  .lvl-ico{font-size:24px;line-height:1}
+  .lvl-name{font-weight:800;font-size:14px;letter-spacing:.04em;color:#e8e8e8}
+  .lvl-tag{font-size:9px;font-weight:700;letter-spacing:.08em;padding:1px 6px;border-radius:6px;background:#2a2a2a}
+  .lvl-desc{font-size:10px;color:#6a6a6a;font-weight:500}
+  /* SAFE — зелёный */
+  .lvl-safe{background:#142318;border-color:rgba(74,222,128,.4)}
+  .lvl-safe .lvl-tag{background:rgba(74,222,128,.15);color:#4ade80}
+  .lvl-safe.active{background:#4ade80;color:#0f0f0f;border-color:#4ade80}
+  .lvl-safe.active .lvl-name,.lvl-safe.active .lvl-desc{color:#0f0f0f}
+  .lvl-safe.active .lvl-tag{background:rgba(0,0,0,.2);color:#0f0f0f}
+  /* VAULT — золотой */
+  .lvl-vault{background:#2a2618;border-color:rgba(212,175,55,.5)}
+  .lvl-vault .lvl-tag{background:rgba(212,175,55,.15);color:#D4AF37}
+  .lvl-vault.active{background:#D4AF37;color:#0f0f0f;border-color:#D4AF37}
+  .lvl-vault.active .lvl-name,.lvl-vault.active .lvl-desc{color:#0f0f0f}
+  .lvl-vault.active .lvl-tag{background:rgba(0,0,0,.2);color:#0f0f0f}
+  /* FORTRESS — оранжевый, толстая рамка, glow в активе */
+  .lvl-fortress{background:#2a1a16;border:2px solid rgba(255,140,0,.5)}
+  .lvl-fortress .lvl-tag{background:rgba(255,140,0,.15);color:#FF8C00}
+  .lvl-fortress.active{
+    background:linear-gradient(135deg,#FF8C00,#D4AF37);
+    color:#0f0f0f;border-color:#FF8C00;
+    box-shadow:0 0 16px rgba(255,140,0,.4)
+  }
+  .lvl-fortress.active .lvl-name,.lvl-fortress.active .lvl-desc{color:#0f0f0f}
+  .lvl-fortress.active .lvl-tag{background:rgba(0,0,0,.2);color:#0f0f0f}
+
+  /* Шапка с метриками */
+  .metric-strip{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  }
+  @media (max-width:700px){.metric-strip{grid-template-columns:repeat(2,1fr);gap:8px}}
+  @media (max-width:380px){.metric-strip .stat{padding:8px 10px}.metric-strip .stat-value{font-size:13px}}
+
+  /* Адаптив floating log + toasts */
+  /* По умолчанию (desktop): тосты подняты над лог-окном */
+  #toastBox{bottom:calc(40vh + 24px)}
+  #logBox{width:340px;max-width:calc(100vw - 32px);max-height:40vh}
+
+  /* Свёрнутое состояние лога — работает на всех экранах */
+  #logBox.compact #logBody{display:none !important}
+  #logBox.compact{max-height:42px !important}
+
+  /* Tablet (≤ 900px): лог-окно поуже, тосты ближе ко дну */
+  @media (max-width:900px){
+    #toastBox{bottom:calc(35vh + 16px)}
+    #logBox{width:300px;max-height:35vh}
+    #logBox.compact{max-height:42px !important}
+  }
+  /* Mobile (≤ 600px): лог-окно — узкая полоска внизу, по тапу разворачивается. Тосты по центру сверху, чтобы видно. */
+  @media (max-width:600px){
+    #toastBox{
+      bottom:auto;top:60px;right:auto;left:50%;transform:translateX(-50%);
+      width:calc(100vw - 24px);max-width:none
+    }
+    #logBox{
+      left:8px;right:8px;bottom:8px;width:auto;max-width:none;
+      max-height:30vh
+    }
+    #logBox.compact{max-height:42px !important}
+  }
+</style>
+</head>
+<body class="bg-bg text-text font-sans antialiased">
+
+<!-- Network blocking banner -->
+<div id="netBanner" class="hidden fixed top-0 inset-x-0 z-50 bg-warn text-black py-2 px-4 text-center text-sm font-bold">
+  Не та сеть. Нужен Sepolia. <button id="btnSwitchNet" class="underline ml-2">Переключить</button>
+</div>
+
+<!-- Главная разметка: sidebar + main -->
+<div class="min-h-vh md:grid md:grid-cols-[256px_1fr]">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="closed md:!translate-x-0 fixed md:sticky top-0 md:top-0 z-40 h-vh w-64 bg-bg-2 border-r border-border flex flex-col">
+    <div class="px-4 py-4 border-b border-border flex items-center gap-3">
+      <!-- Логотип: золотой якорь с замком на сейфе -->
+      <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg" aria-label="AnchorVault">
+        <defs>
+          <linearGradient id="safeBg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2a2a2a"/>
+            <stop offset="100%" stop-color="#0f0f0f"/>
+          </linearGradient>
+          <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f0d77a"/>
+            <stop offset="50%" stop-color="#D4AF37"/>
+            <stop offset="100%" stop-color="#a07d1f"/>
+          </linearGradient>
+        </defs>
+        <!-- Сейф -->
+        <rect x="3" y="6" width="58" height="54" rx="9" fill="url(#safeBg)" stroke="#D4AF37" stroke-width="1.4"/>
+        <!-- Заклёпки -->
+        <circle cx="9" cy="12" r="1.2" fill="#D4AF37" opacity=".7"/>
+        <circle cx="55" cy="12" r="1.2" fill="#D4AF37" opacity=".7"/>
+        <circle cx="9" cy="54" r="1.2" fill="#D4AF37" opacity=".7"/>
+        <circle cx="55" cy="54" r="1.2" fill="#D4AF37" opacity=".7"/>
+        <!-- Замок-дужка над якорем -->
+        <path d="M 28 21 Q 28 15, 32 15 Q 36 15, 36 21" fill="none" stroke="url(#gold)" stroke-width="2" stroke-linecap="round"/>
+        <!-- Корпус замка -->
+        <rect x="26" y="20" width="12" height="9" rx="1.5" fill="url(#gold)"/>
+        <circle cx="32" cy="24" r="1.2" fill="#0f0f0f"/>
+        <!-- Якорь: стержень -->
+        <rect x="30.7" y="28" width="2.6" height="18" fill="url(#gold)"/>
+        <!-- Поперечина -->
+        <rect x="24" y="32" width="16" height="2.4" rx="1" fill="url(#gold)"/>
+        <!-- Дуга якоря -->
+        <path d="M 17 44 Q 17 53, 32 54 Q 47 53, 47 44" fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linecap="round"/>
+        <!-- Лапы -->
+        <path d="M 17 44 L 14 41 L 19 42 Z" fill="url(#gold)"/>
+        <path d="M 47 44 L 50 41 L 45 42 Z" fill="url(#gold)"/>
+      </svg>
+      <div>
+        <div class="font-bold text-sm tracking-wide">ANCHORVAULT</div>
+        <div class="text-[10px] text-gold mono font-semibold">V43 · Sepolia</div>
+      </div>
+    </div>
+    <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5" id="navMenu">
+      <div class="nav-item active" data-route="home"><span class="ico">🏠</span><span>Главная</span></div>
+      <div class="nav-item" data-route="open"><span class="ico">➕</span><span>Открыть сейф</span></div>
+      <div class="nav-item" data-route="deposit"><span class="ico">📥</span><span>Пополнить</span></div>
+      <div class="nav-item" data-route="withdraw"><span class="ico">📤</span><span>Вывести</span></div>
+      <div class="nav-item" data-route="emergency"><span class="ico">🚨</span><span>Аварийный</span></div>
+      <div class="nav-item" data-route="settings"><span class="ico">🛠</span><span>Настройки сейфа</span></div>
+      <div class="nav-item" data-route="transfers"><span class="ico">💸</span><span>Переводы</span></div>
+      <div class="nav-item" data-route="history"><span class="ico">📜</span><span>История</span></div>
+    </nav>
+    <div class="px-3 py-3 border-t border-border text-[11px] space-y-1.5">
+      <div class="flex items-center justify-between">
+        <span class="text-text-3">Сеть:</span>
+        <span id="footNet" class="badge badge-mute">не подключено</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-text-3">Антифишинг:</span>
+        <span id="footAp" class="badge badge-mute">—</span>
+      </div>
+      <a id="footEtherscan" target="_blank" rel="noopener" class="block text-gold hover:underline truncate">
+        Открыть контракт на Etherscan ↗
+      </a>
+    </div>
+  </aside>
+
+  <div id="sbBackdrop" class="hidden md:hidden fixed inset-0 bg-black/60 z-30"></div>
+
+  <!-- Main -->
+  <main class="min-h-vh flex flex-col">
+    <!-- Top bar: бургер, селектор языка, кнопки -->
+    <header class="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-2 flex-wrap">
+      <button id="btnBurger" class="md:hidden btn btn-sm">☰</button>
+      <div class="flex-1 min-w-0">
+        <div class="text-[10px] text-text-3 uppercase tracking-wider">Контракт V43</div>
+        <div class="flex items-center gap-2 mono text-xs truncate">
+          <span id="hContract" class="truncate text-text">—</span>
+          <button id="btnCopyContract" class="btn btn-sm" title="Скопировать адрес">📋</button>
+          <button id="btnSetContract" class="btn btn-sm" title="Задать или сменить адрес контракта V43">✏</button>
+        </div>
+      </div>
+      <button id="btnAddAncr" class="btn btn-sm hidden sm:inline-flex" title="Добавить ANCR в кошелёк">+ ANCR</button>
+      <select id="langSelect" class="btn btn-sm !w-auto !py-1.5 cursor-pointer" title="Язык" style="min-width:54px">
+        <option value="ru">RU</option>
+        <option value="en">EN</option>
+        <option value="zh">ZH</option>
+      </select>
+      <button id="btnConnect" class="btn btn-gold btn-shimmer">Подключить кошелёк</button>
+    </header>
+
+    <!-- Metric strip: 4 метрики -->
+    <div class="px-4 md:px-6 py-3 border-b border-border bg-bg-2">
+      <div class="metric-strip max-w-4xl mx-auto">
+        <div class="stat"><div class="stat-label">Свободных ANCR</div><div class="stat-value gold" id="mFree">—</div></div>
+        <div class="stat"><div class="stat-label">На якоре</div><div class="stat-value" id="mLocked">—</div></div>
+        <div class="stat"><div class="stat-label">В сейфе всего</div><div class="stat-value" id="mVault">—</div></div>
+        <div class="stat"><div class="stat-label">Газ (ETH)</div><div class="stat-value warn" id="mGas">—</div></div>
+      </div>
+    </div>
+
+    <div id="pageContent" class="flex-1 p-4 md:p-6 max-w-3xl w-full mx-auto"></div>
+
+    <footer class="border-t border-border px-4 py-3 text-[11px] text-text-3 flex items-center justify-between flex-wrap gap-2">
+      <span>AnchorVault · V43 testnet · все суммы фейковые</span>
+      <span id="footApFull" class="mono"></span>
+    </footer>
+  </main>
+</div>
+
+<!-- Toast container поверх лог-окна -->
+<div id="toastBox" class="fixed right-4 z-[100] flex flex-col gap-2 max-w-sm w-[calc(100vw-32px)] sm:w-auto"></div>
+
+<!-- Плавающий журнал сессии -->
+<div id="logBox" class="fixed bottom-4 right-4 z-[95] bg-panel border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
+  <div id="logHeader" class="flex items-center justify-between px-3 py-2 bg-panel-2 border-b border-border cursor-pointer select-none">
+    <div class="flex items-center gap-2">
+      <span class="text-base">📜</span>
+      <span class="text-xs font-bold">Журнал сессии</span>
+      <span id="logCount" class="badge badge-info" style="font-size:9px;padding:1px 6px">0</span>
+    </div>
+    <div class="flex items-center gap-1">
+      <button id="logClear" class="btn btn-sm !py-0.5 !px-2" title="Очистить журнал">🗑</button>
+      <button id="logToggle" class="btn btn-sm !py-0.5 !px-2" title="Свернуть / развернуть">−</button>
+    </div>
+  </div>
+  <div id="logBody" class="flex-1 overflow-y-auto p-2 space-y-1 text-xs"></div>
+</div>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+  <div class="card max-w-md w-full text-center" style="border-color:#D4AF37">
+    <div class="mb-3"><span class="spinner" style="width:32px;height:32px;color:#D4AF37"></span></div>
+    <div id="loadTitle" class="font-bold mb-1 text-gold">Подтвердите в кошельке…</div>
+    <div id="loadMsg" class="text-sm text-text-2">Ожидаем действия пользователя</div>
+    <div id="loadHash" class="mt-3 text-[11px] mono text-text-3 break-all"></div>
+  </div>
+</div>
+
+<!-- Generic modal -->
+<div id="modal" class="hidden fixed inset-0 z-[140] bg-black/70 flex items-center justify-center px-4">
+  <div class="card max-w-md w-full" style="border-color:#D4AF37">
+    <div id="modalTitle" class="text-base font-bold mb-2 text-gold"></div>
+    <div id="modalBody" class="text-sm text-text-2 mb-4"></div>
+    <div class="flex justify-end gap-2">
+      <button id="modalCancel" class="btn">Отмена</button>
+      <button id="modalOk" class="btn btn-gold btn-shimmer">Продолжить</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOS modal -->
+<div id="tosModal" class="hidden fixed inset-0 z-[145] bg-black/80 flex items-center justify-center px-4">
+  <div class="card max-w-lg w-full" style="border-color:#D4AF37">
+    <div class="text-lg font-bold mb-3 text-gold">Перед началом работы</div>
+    <ul class="text-sm text-text-2 space-y-2 mb-4 list-disc pl-5">
+      <li>Сейчас вы в <b>тестовой сети Sepolia</b>. Эти токены — игрушечные, реальной ценности нет.</li>
+      <li>Запомните или сохраните <b>все 3 фразы</b>. Без них сейф откроется только аварийным выводом с штрафом.</li>
+      <li>Пульт показывает <b>антифишинг-фразу</b> при каждом входе. Если она изменилась — закройте сайт и проверьте URL.</li>
+      <li>Аварийный код храните отдельно от основного. Это последняя защита.</li>
+      <li>Все операции — мгновенные, ожидания 7 дней нет. Будьте внимательны при подтверждении.</li>
+    </ul>
+    <label class="flex items-center gap-2 text-sm normal-case font-normal mb-3" style="text-transform:none;letter-spacing:0;font-size:13px;color:#e8e8e8">
+      <input type="checkbox" id="tosCheck" class="w-auto" style="width:auto"> Я ознакомился и принимаю риски
+    </label>
+    <div class="flex justify-end gap-2">
+      <button id="tosAccept" class="btn btn-gold btn-shimmer" disabled>Согласен</button>
+    </div>
+  </div>
+</div>
+
+<!-- Антифишинг WARNING полноэкранный -->
+<div id="apBad" class="hidden ap-bad">
+  <div class="ap-bad-inner">
+    <div class="text-6xl mb-3">🚨</div>
+    <div class="text-2xl font-bold mb-2 text-warn">Возможный фишинг</div>
+    <div class="text-sm text-text-2 mb-4">
+      Контрольная фраза с контракта <b>не совпадает</b> с сохранённой у вас.<br>
+      Возможные причины: подмена сайта, новый адрес контракта, смена кодов.<br>
+      <b>Не подтверждайте транзакции</b>, пока не разберётесь.
+    </div>
+    <div class="bg-bg-2 border border-border rounded p-3 mb-2 text-left">
+      <div class="text-[11px] text-text-3 mb-1">Сейчас в контракте</div>
+      <div id="apOnchain" class="mono text-xs break-all text-warn"></div>
+    </div>
+    <div class="bg-bg-2 border border-border rounded p-3 mb-4 text-left">
+      <div class="text-[11px] text-text-3 mb-1">Сохранено у вас</div>
+      <div id="apSaved" class="mono text-xs break-all text-info"></div>
+    </div>
+    <div class="flex gap-2 justify-center">
+      <button id="apDeny" class="btn">Отключиться</button>
+      <button id="apTrust" class="btn btn-warn">Я доверяю — обновить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   КОНФИГ
+   ========================================================================== */
+const CONFIG = {
+  // Адрес контракта V43 на Sepolia.
+  // По умолчанию подставлен адрес, который указал пользователь.
+  // Меняется кнопкой ✏ в шапке и сохраняется в localStorage.
+  CONTRACT_ADDRESS: (function(){
+    const saved = localStorage.getItem('av_v43_address');
+    if(saved && saved!=='0x0000000000000000000000000000000000000000' && /^0x[0-9a-fA-F]{40}$/.test(saved)) return saved;
+    return '0xC946d1018C2D263C1C0a241c08D612827F6bD89f';
+  })(),
+  ANCR_ADDRESS:     '0x2eC26403084A4b3102059C70E349409288c1B1EE',
+  GUARDIAN_ADDRESS: '0x528460cED8Ec256FF2c9f8Ac359f4fa0150996C8',
+  CHAIN_ID:         11155111n,
+  CHAIN_HEX:        '0xaa36a7',
+  CHAIN_NAME:       'Sepolia',
+  RPC_URL:          'https://1rpc.io/sepolia',
+  EXPLORER:         'https://sepolia.etherscan.io',
+};
+
+/* SVG-иконка ANCR для wallet_watchAsset (золотой якорь) */
+const ANCR_ICON_SVG = `data:image/svg+xml;base64,${btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="30" fill="#0f0f0f" stroke="#D4AF37" stroke-width="2"/>
+<g fill="#D4AF37">
+<circle cx="32" cy="20" r="4" fill="none" stroke="#D4AF37" stroke-width="2"/>
+<rect x="30.5" y="24" width="3" height="22" rx="1"/>
+<rect x="22" y="30" width="20" height="2.5" rx="1"/>
+<path d="M15 44 Q15 54, 32 54 Q49 54, 49 44" fill="none" stroke="#D4AF37" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M15 44 L11 41 L17 42 Z"/>
+<path d="M49 44 L53 41 L47 42 Z"/>
+</g>
+</svg>`.trim())}`;
+
+/* ==========================================================================
+   ABI V43 (по таблице ТЗ — 3 кода, все операции мгновенные)
+   ========================================================================== */
+const VAULT_ABI = [
+  // Константы
+  "function VERSION() view returns (uint256)",
+  "function MIN_DEPOSIT() view returns (uint256)",
+  "function MIN_CODE_LENGTH() view returns (uint256)",
+  "function MAX_CODE_LENGTH() view returns (uint256)",
+  "function MIN_HOLD_PERIOD() view returns (uint256)",
+  "function MAX_WELCOME_BONUS() view returns (uint256)",
+  // Роли
+  "function creator() view returns (address)",
+  "function guardian() view returns (address)",
+  "function paused() view returns (bool)",
+  // Токены
+  "function ANCR_TOKEN() view returns (address)",
+  "function supportedTokens(address) view returns (bool)",
+  "function addSupportedToken(address)",
+  "function removeSupportedToken(address)",
+  // Состояние юзера
+  "function activeVaultId(address) view returns (uint256)",
+  "function userVaultCount(address) view returns (uint256)",
+  "function welcomeBonusClaimed(address) view returns (bool)",
+  "function totalFailedAttempts(address) view returns (uint256)",
+  "function frozenUntil(address) view returns (uint256)",
+  // Финансы
+  "function lockedPrincipal(address) view returns (uint256)",
+  "function creatorFees(address) view returns (uint256)",
+  "function strategicReserve(address) view returns (uint256)",
+  "function rewardPool(address) view returns (uint256)",
+  "function totalBurnedANCR() view returns (uint256)",
+  "function welcomeBonus() view returns (uint256)",
+  // Геттеры
+  "function getVaultCore(address user, uint256 vid) view returns (uint64 id, address token, uint120 amount, string name, uint8 status, uint8 level, address emergencyAddress)",
+  "function getVaultTimings(address user, uint256 vid) view returns (uint48 lockedAt, uint48 depositedAt, uint48 lockedUntil, uint48 voluntaryLockUntil, uint16 timelockHours)",
+  "function getVaultSecurity(address user, uint256 vid) view returns (uint16 failCount, bool requiresCodeRotation)",
+  "function getAntiPhishHash(address user, uint256 vid) view returns (bytes32)",
+  "function getMaxTimelockForLevel(uint8) pure returns (uint256)",
+  "function getDepositFeeForLevel(uint8) pure returns (uint256)",
+  // V43: операции с 3 кодами, мгновенные
+  "function openVault(address token, tuple(string name, string code, string antiPhrase, string recovery, uint256 amount, address emergencyAddress) p, uint8 level_) returns (uint256)",
+  "function depositToVault(uint256 vid, uint256 amount, string code)",
+  "function withdrawFromVault(uint256 vid, uint256 amount, address to, string code, string antiPhrase)",
+  "function transferVault(uint256 vid, address to, string code, string antiPhrase, tuple(string newCode, string newAntiPhrase, string newRecovery) nc)",
+  "function earlyClose(uint256 vid, string recovery)",
+  "function recoverToSafe(uint256 vid, string recovery)",
+  "function emergencyWithdrawToAny(uint256 vid, address to, string recovery, string antiPhrase)",
+  "function rotateCodes(uint256 vid, string oldCode, string oldRecovery, tuple(string newCode, string newAntiPhrase, string newRecovery) nc)",
+  "function setTimelock(uint256 vid, uint256 hoursVal, string code)",
+  "function setVoluntaryLock(uint256 vid, uint256 lockUntilTimestamp, string code)",
+  "function changeEmergencyAddress(uint256 vid, address newAddress, string recovery)",
+  "function donateToRewardPool(address token, uint256 amount)",
+  "function resetFailedAttempts()",
+  // Админ
+  "function setWelcomeBonus(uint256 amount)",
+  "function transferCreatorship(address newCreator)",
+  "function acceptCreatorship()",
+  "function transferGuardianship(address newGuardian)",
+  "function acceptGuardianship()",
+  "function requestPause()",
+  "function cancelPauseRequest()",
+  "function executePause()",
+  "function emergencyPause()",
+  "function unpause()",
+  "function requestCreatorWithdraw(address token, address to, uint256 amount)",
+  "function cancelCreatorWithdraw(address token)",
+  "function withdrawCreatorFees(address token)",
+  "function requestReserveWithdraw(address token, address to, uint256 amount)",
+  "function cancelReserveWithdraw(address token)",
+  "function withdrawStrategicReserve(address token)",
+  // События
+  "event VaultCreated(address indexed user, uint256 vaultId, address indexed token, uint256 amount, string name, address emergencyAddress, uint8 level)",
+  "event VaultDeposited(address indexed user, uint256 vaultId, address indexed token, uint256 net, uint256 newTotal)",
+  "event VaultWithdrawn(address indexed user, uint256 vaultId, address indexed token, address to, uint256 amount)",
+  "event VaultEarlyClosed(address indexed user, uint256 vaultId, uint256 payout, uint256 penalty)",
+  "event VaultRecovered(address indexed user, uint256 vaultId, address indexed to, uint256 payout, uint256 penalty)",
+  "event EmergencyWithdrawToAny(address indexed user, uint256 vaultId, address indexed to, uint256 payout, uint256 fee)",
+  "event VaultTransferred(address indexed from, address indexed to, uint256 fromId, uint256 toId)",
+  "event CodesRotated(address indexed user, uint256 vaultId)",
+  "event WrongCodeAttempt(address indexed user, uint256 vaultId)",
+  "event WelcomeBonusPaid(address indexed user, uint256 amount)"
+];
+
+const ERC20_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address, address) view returns (uint256)",
+  "function approve(address, uint256) returns (bool)",
+  "function transfer(address, uint256) returns (bool)"
+];
+
+/* ==========================================================================
+   Понятные тексты ошибок
+   ========================================================================== */
+const ERROR_MAP = {
+  'BadVaultId':            'Неверный ID сейфа',
+  'NotActive':             'Сейф уже закрыт',
+  'WeakCode':              'Код слишком короткий — нужно минимум 10 символов',
+  'CodeTooLong':           'Код слишком длинный — максимум 64 символа',
+  'WrongCode':             'Неверный код доступа',
+  'AntiPhishRequired':     'Введите антифишинг-фразу',
+  'ZeroAddress':           'Нулевой адрес не подходит',
+  'InvalidAddress':        'Неверный адрес',
+  'Locked':                'Сейф временно заблокирован — повторите позже',
+  'Frozen':                'Аккаунт заморожен из-за частых неудачных попыток',
+  'NotCreator':            'Только создатель контракта',
+  'NotGuardian':           'Только guardian',
+  'ContractPaused':        'Контракт на паузе — операции временно недоступны',
+  'TokenNotSupported':     'Этот токен не поддерживается контрактом',
+  'DepositBelowMinimum':   'Сумма меньше минимальной (0.01)',
+  'InvalidAmount':         'Неверная сумма',
+  'InvalidLevel':          'Неверный уровень защиты',
+  'VaultLimitReached':     'У вас уже есть активный сейф — закройте старый перед открытием нового',
+  'TooManyAttempts':       'Слишком частые попытки — подождите минуту',
+  'MustRotateCodesFirst':  'Нужно сначала сменить коды — раздел «Настройки сейфа»',
+  'TimelockTooLong':       'Таймлок превышает максимум для этого уровня',
+  'LockTooLong':           'Слишком длинная блокировка',
+  'CooldownNotExpired':    'Cooldown ещё не истёк',
+  'NotPendingRole':        'Вы не pending для этой роли',
+  'PauseTimeoutNotReached':'Время на паузу ещё не наступило',
+  'NoPauseRequest':        'Нет запроса на паузу',
+  'AdminRequestPending':   'Уже есть активный административный запрос',
+  'TimelockNotExpired':    'Административный таймлок ещё не истёк',
+  'NoAdminRequest':        'Нет активного административного запроса',
+  'BonusExceedsLimit':     'Бонус превышает максимум',
+  'AmountExceedsUint120':  'Слишком большая сумма (выше лимита контракта)',
+  'DirectTransferForbidden':'Прямые переводы запрещены — используйте «Открыть сейф»',
+  // ethers/MetaMask
+  'user rejected':         'Вы отменили транзакцию в кошельке',
+  'user denied':           'Вы отменили транзакцию в кошельке',
+  'insufficient funds':    'Не хватает ETH на газ — пополните Sepolia ETH'
+};
+
+function parseError(e){
+  if(!e) return 'Неизвестная ошибка';
+  let msg = e.reason || e.shortMessage || e.message || String(e);
+  const name = e.revert?.name || e.errorName;
+  if(name && ERROR_MAP[name]) return ERROR_MAP[name];
+  const data = e?.data?.data || e?.error?.data || e?.info?.error?.data || e?.data;
+  if(typeof data==='string' && data.startsWith('0x') && state.vault){
+    try{
+      const p = state.vault.interface.parseError(data);
+      if(p && ERROR_MAP[p.name]) return ERROR_MAP[p.name];
+      if(p) return p.name;
+    }catch{}
+  }
+  for(const [k,v] of Object.entries(ERROR_MAP)){
+    if(msg.includes(k)) return v;
+  }
+  return msg.length>180 ? msg.slice(0,180)+'…' : msg;
+}
+
+/* ==========================================================================
+   State
+   ========================================================================== */
+const state = {
+  provider:null, signer:null, user:null, vault:null,
+  isCreator:false, isGuardian:false, netOK:false,
+  route:'home',
+  activeVid:0n,
+  consts:{},
+  ancr:{ address: CONFIG.ANCR_ADDRESS, symbol:'ANCR', decimals:18 },
+  knownTokens:[],
+  tosAccepted: localStorage.getItem('av_tos43')==='1',
+  lang: localStorage.getItem('av_lang') || 'ru',
+  txHistory: JSON.parse(localStorage.getItem('av_txhist')||'[]')
+};
+
+/* ==========================================================================
+   DOM helpers
+   ========================================================================== */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const short = (a,h=6,t=4)=>!a?'—':(a.length<=h+t+2?a:a.slice(0,h)+'…'+a.slice(-t));
+const fmtU = (v,d=18)=>{try{return ethers.formatUnits(v??0n,d);}catch{return '0';}};
+const trim = (s,m=6)=>{if(!s.includes('.'))return s;const[i,f]=s.split('.');const tt=f.slice(0,m).replace(/0+$/,'');return tt?`${i}.${tt}`:i;};
+const fmtTs = sec=>{const n=Number(sec);if(!n)return '—';return new Date(n*1000).toLocaleString();};
+function fmtDate(sec){const n=Number(sec);if(!n)return '—';const d=new Date(n*1000);return d.toLocaleDateString()+' '+d.toLocaleTimeString().slice(0,5);}
+
+/* ==========================================================================
+   i18n
+   ========================================================================== */
+const I18N = {
+  ru: {
+    'header.connect':'Подключить кошелёк','header.disconnect':'Отключить',
+    'metric.free':'Свободных ANCR','metric.locked':'На якоре',
+    'metric.vault':'В сейфе всего','metric.gas':'Газ (ETH)',
+    'log.title':'Журнал сессии','log.empty':'Здесь появятся ваши действия и события'
+  },
+  en: {
+    'header.connect':'Connect wallet','header.disconnect':'Disconnect',
+    'metric.free':'Free ANCR','metric.locked':'Anchored',
+    'metric.vault':'In vault','metric.gas':'Gas (ETH)',
+    'log.title':'Session log','log.empty':'Your actions will appear here'
+  },
+  zh: {
+    'header.connect':'连接钱包','header.disconnect':'断开',
+    'metric.free':'可用 ANCR','metric.locked':'已锚定',
+    'metric.vault':'保险库内','metric.gas':'Gas (ETH)',
+    'log.title':'会话日志','log.empty':'您的操作将显示在此'
+  }
+};
+function t(key){const l=state.lang||'ru';return (I18N[l]&&I18N[l][key])||I18N.ru[key]||key;}
+function applyLang(){
+  document.documentElement.lang = state.lang;
+  $('#mFree').previousElementSibling.textContent = t('metric.free');
+  $('#mLocked').previousElementSibling.textContent = t('metric.locked');
+  $('#mVault').previousElementSibling.textContent = t('metric.vault');
+  $('#mGas').previousElementSibling.textContent = t('metric.gas');
+  const sel = $('#langSelect'); if(sel) sel.value = state.lang;
+  localStorage.setItem('av_lang', state.lang);
+}
+
+/* ==========================================================================
+   Сессионный журнал (плавающее окно)
+   ========================================================================== */
+const SLOG = [];
+function sessionLog(msg, type='info'){
+  const ts = new Date().toTimeString().slice(0,8);
+  SLOG.push({ts, msg, type});
+  renderSlog();
+}
+function renderSlog(){
+  const body = $('#logBody'); const cnt = $('#logCount');
+  if(!body) return;
+  cnt.textContent = SLOG.length;
+  if(!SLOG.length){
+    body.innerHTML = `<div class="text-text-3 text-center py-3 text-[11px]">${esc(t('log.empty'))}</div>`;
+    return;
+  }
+  body.innerHTML = SLOG.slice().reverse().map(r=>{
+    const ico = {success:'✓',error:'✕',warning:'⚠',info:'·'}[r.type] || '·';
+    const cls = {success:'text-success',error:'text-warn',warning:'text-warn',info:'text-info'}[r.type] || 'text-text-2';
+    return `<div class="flex items-start gap-2 leading-tight py-0.5">
+      <span class="text-text-3 mono" style="font-size:10px">${r.ts}</span>
+      <span class="${cls}">${ico}</span>
+      <span class="text-text flex-1">${esc(r.msg)}</span>
+    </div>`;
+  }).join('');
+  body.scrollTop = 0;
+}
+function bindLogControls(){
+  const clearBtn = $('#logClear');
+  const togBtn   = $('#logToggle');
+  const header   = $('#logHeader');
+  if(clearBtn) clearBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    e.preventDefault();
+    if(SLOG.length && !confirm('Очистить журнал сессии?')) return;
+    SLOG.length=0;
+    renderSlog();
+  });
+  if(togBtn) togBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    e.preventDefault();
+    toggleLog();
+  });
+  if(header) header.addEventListener('click', (e)=>{
+    // Игнорируем клики, если они уже обработаны кнопками внутри
+    if(e.target.closest('#logClear') || e.target.closest('#logToggle')) return;
+    toggleLog();
+  });
+  // Стартуем РАЗВЁРНУТЫМ на десктопе (так видна диагностика подключения),
+  // и свёрнутым только на узких мобильных экранах
+  if(window.matchMedia && window.matchMedia('(max-width: 600px)').matches){
+    $('#logBox').classList.add('compact');
+    $('#logToggle').textContent = '+';
+  }
+}
+function toggleLog(){
+  const box = $('#logBox'); const tog = $('#logToggle');
+  if(!box || !tog) return;
+  box.classList.toggle('compact');
+  tog.textContent = box.classList.contains('compact') ? '+' : '−';
+}
+
+/* Делаем tooltip-кружки фокусируемыми → подсказка по тапу на тач-устройствах */
+function bindTipsFocus(scope=document){
+  $$('.tip',scope).forEach(el=>{
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+  });
+}
+
+/* ==========================================================================
+   Toast / Modal / Loading
+   ========================================================================== */
+function toast(msg, type='info', timeout=5000){
+  const colors = {
+    success:'border-success text-success',
+    error:'border-warn text-warn',
+    warning:'border-warn text-warn',
+    info:'border-info text-info'
+  };
+  const ico = {success:'✓',error:'✕',warning:'⚠',info:'ℹ'};
+  const el = document.createElement('div');
+  el.className = `toast card flex items-start gap-2`;
+  el.style.borderLeftWidth = '4px';
+  el.style.borderLeftColor = type==='success' ? '#4ade80' : type==='error'||type==='warning' ? '#FF8C00' : '#5da3d5';
+  el.style.padding = '12px 14px';
+  el.innerHTML = `
+    <span class="text-lg leading-none mt-0.5">${ico[type]||'·'}</span>
+    <div class="flex-1 text-sm text-text">${esc(msg)}</div>
+    <button class="text-text-3 hover:text-text">✕</button>`;
+  el.querySelector('button').onclick = ()=>el.remove();
+  $('#toastBox').appendChild(el);
+  if(type!=='error' && timeout){
+    setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);}, timeout);
+  }
+}
+function confirmModal(title, body){
+  return new Promise(resolve=>{
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = body;
+    $('#modal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    const close = v=>{
+      $('#modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      $('#modalOk').onclick=null; $('#modalCancel').onclick=null;
+      resolve(v);
+    };
+    $('#modalOk').onclick = ()=>close(true);
+    $('#modalCancel').onclick = ()=>close(false);
+  });
+}
+function showLoading(title, msg, hash=''){
+  $('#loadTitle').textContent = title;
+  $('#loadMsg').textContent = msg;
+  $('#loadHash').innerHTML = hash ? `<a href="${CONFIG.EXPLORER}/tx/${hash}" target="_blank" class="text-gold hover:underline">${short(hash,10,8)} ↗</a>` : '';
+  $('#loadingOverlay').classList.remove('hidden');
+}
+function hideLoading(){$('#loadingOverlay').classList.add('hidden');}
+
+/* ==========================================================================
+   История транзакций (localStorage)
+   ========================================================================== */
+function addTxHistory(type, hash, status='ok'){
+  state.txHistory.unshift({type, hash, status, ts:Date.now()});
+  if(state.txHistory.length>100) state.txHistory.length = 100;
+  localStorage.setItem('av_txhist', JSON.stringify(state.txHistory));
+}
+
+/* ==========================================================================
+   Универсальная обёртка транзакции с человеческими сообщениями
+   ========================================================================== */
+async function txCall(humanName, txPromise){
+  try{
+    showLoading('Подтвердите в кошельке…', humanName);
+    sessionLog(`Начинаю: ${humanName}`, 'info');
+    const tx = await txPromise;
+    showLoading('Ждём подтверждение в сети…', humanName, tx.hash);
+    sessionLog(`Транзакция отправлена · ${short(tx.hash,10,6)}`, 'info');
+    const rc = await tx.wait();
+    hideLoading();
+    if(rc?.status===0){
+      toast(`Транзакция отменена сетью: ${humanName}`, 'error');
+      sessionLog(`Сеть отклонила: ${humanName}`, 'error');
+      addTxHistory(humanName, tx.hash, 'fail');
+      return null;
+    }
+    toast(`Готово: ${humanName}`, 'success');
+    sessionLog(`Успех: ${humanName}`, 'success');
+    addTxHistory(humanName, tx.hash, 'ok');
+    return rc;
+  }catch(e){
+    hideLoading();
+    const m = parseError(e);
+    toast(m, 'error');
+    sessionLog(`Не удалось «${humanName}»: ${m}`, 'error');
+    console.error(humanName, e);
+    return null;
+  }
+}
+
+/* ==========================================================================
+   Сеть
+   ========================================================================== */
+async function ensureNetwork(){
+  if(!window.ethereum) return false;
+  try{
+    const cid = await window.ethereum.request({method:'eth_chainId'});
+    const ok = BigInt(cid) === CONFIG.CHAIN_ID;
+    state.netOK = ok;
+    $('#netBanner').classList.toggle('hidden', ok);
+    $('#footNet').textContent = ok ? 'Sepolia ✓' : 'другая сеть';
+    $('#footNet').className = 'badge ' + (ok ? 'badge-success' : 'badge-warn');
+    return ok;
+  }catch{return false;}
+}
+async function switchToSepolia(){
+  if(!window.ethereum){toast('Установите MetaMask','error');return;}
+  try{
+    await window.ethereum.request({method:'wallet_switchEthereumChain', params:[{chainId:CONFIG.CHAIN_HEX}]});
+  }catch(err){
+    if(err && err.code===4902){
+      await window.ethereum.request({
+        method:'wallet_addEthereumChain',
+        params:[{
+          chainId:CONFIG.CHAIN_HEX, chainName:CONFIG.CHAIN_NAME,
+          nativeCurrency:{name:'SepoliaETH',symbol:'SEP',decimals:18},
+          rpcUrls:[CONFIG.RPC_URL], blockExplorerUrls:[CONFIG.EXPLORER]
+        }]
+      });
+    } else toast(parseError(err),'error');
+  }
+}
+
+/* ==========================================================================
+   Подключение
+   ========================================================================== */
+async function connectWallet(){
+  if(!window.ethereum){
+    toast('Не нашли кошелёк. Установите MetaMask и обновите страницу.','error');
+    return;
+  }
+  try{
+    sessionLog('Запрашиваю доступ к кошельку…','info');
+
+    // 1) Принудительно открываем окно выбора аккаунта.
+    //    После Disconnect в MetaMask старый аккаунт не вернётся автоматически —
+    //    нужно явно попросить разрешения заново.
+    let accounts;
+    try{
+      // wallet_requestPermissions с пустым eth_accounts заставит MetaMask
+      // показать окно выбора аккаунта ВСЕГДА, даже если разрешение уже было
+      await window.ethereum.request({
+        method:'wallet_requestPermissions',
+        params:[{eth_accounts:{}}]
+      });
+      accounts = await window.ethereum.request({method:'eth_accounts'});
+    }catch(permErr){
+      // Старые MetaMask или другие кошельки могут не поддерживать wallet_requestPermissions
+      // → fallback на классический eth_requestAccounts
+      try{
+        accounts = await window.ethereum.request({method:'eth_requestAccounts'});
+      }catch(reqErr){
+        if(reqErr.code===4001 || permErr.code===4001){
+          toast('Вы отказали в доступе. Нажмите «Подключить» и подтвердите в кошельке.','warning');
+          sessionLog('Пользователь отказал в доступе','warning');
+        } else {
+          toast(parseError(reqErr||permErr),'error');
+        }
+        return;
+      }
+    }
+
+    if(!accounts || accounts.length===0){
+      toast('Кошелёк подключён к сайту, но аккаунт не выбран. В MetaMask: меню → Connected sites → выберите аккаунт.','error');
+      sessionLog('MetaMask не вернул ни одного аккаунта','error');
+      return;
+    }
+
+    // 2) Создаём СВЕЖИЙ провайдер и signer на каждое подключение.
+    //    Не переиспользуем старые объекты — после Clear permissions они "мёртвые".
+    state.provider = new ethers.BrowserProvider(window.ethereum, 'any');
+    state.signer = await state.provider.getSigner();
+    state.user = await state.signer.getAddress();
+
+    // Проверим, что у signer тот же адрес, что вернул eth_accounts
+    if(state.user.toLowerCase() !== accounts[0].toLowerCase()){
+      sessionLog(`Несовпадение signer ${short(state.user,6,4)} vs accounts[0] ${short(accounts[0],6,4)} — использую accounts[0]`,'warning');
+      state.user = accounts[0];
+    }
+
+    state.vault = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, VAULT_ABI, state.signer);
+
+    if(!(await ensureNetwork())){
+      toast('Кошелёк подключён, но не та сеть. Переключитесь на Sepolia.','warning');
+    }
+
+    sessionLog(`Кошелёк ${short(state.user,6,4)} подключён, начинаю опрос контракта`,'info');
+
+    // Проверяем что в CONFIG.CONTRACT_ADDRESS реально лежит контракт
+    const codeOk = await verifyContract();
+    if(!codeOk){
+      // Не падаем — пользователь увидит ошибку в журнале и сможет исправить
+    }
+
+    await loadConstants();
+    await checkRoles();
+    await loadAncrMeta();
+    try{
+      state.activeVid = await state.vault.activeVaultId(state.user);
+      sessionLog(`activeVaultId = ${state.activeVid.toString()}`,'info');
+    }catch(e){
+      state.activeVid = 0n;
+      sessionLog(`activeVaultId упало: ${parseError(e)}`,'warning');
+    }
+
+    $('#btnConnect').textContent = short(state.user,6,4);
+    $('#btnConnect').classList.remove('btn-gold','btn-shimmer');
+    $('#btnConnect').classList.add('btn');
+    $('#btnConnect').onclick = ()=>disconnect();
+    $('#hContract').textContent = CONFIG.CONTRACT_ADDRESS;
+    $('#footEtherscan').href = `${CONFIG.EXPLORER}/address/${CONFIG.CONTRACT_ADDRESS}`;
+
+    await checkAntiphish();
+    await refreshMetrics();
+
+    toast(`Подключен ${short(state.user,6,4)}`,'success');
+    sessionLog(`Готово, кошелёк подключён`,'success');
+    route(state.route);
+  }catch(e){
+    toast(parseError(e),'error');
+    sessionLog(`Подключение упало: ${parseError(e)}`,'error');
+    console.error('connectWallet error:', e);
+  }
+}
+function disconnect(){
+  // Полный сброс всех объектов провайдера — критично после Clear permissions в MetaMask
+  state.provider = null;
+  state.signer = null;
+  state.user = null;
+  state.vault = null;
+  state.isCreator = false;
+  state.isGuardian = false;
+  state.activeVid = 0n;
+  state.knownTokens = [];
+
+  // Восстанавливаем read-only провайдер, чтобы UI читал константы и без кошелька
+  try{
+    state.provider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+  }catch(e){console.warn('RO provider on disconnect',e);}
+
+  $('#btnConnect').textContent = 'Подключить кошелёк';
+  $('#btnConnect').classList.add('btn-gold','btn-shimmer');
+  $('#btnConnect').classList.remove('btn');
+  $('#btnConnect').onclick = ()=>connectWallet();
+  $('#mFree').textContent = $('#mLocked').textContent = $('#mVault').textContent = $('#mGas').textContent = '—';
+  $('#footAp').textContent = '—';
+  $('#footAp').className = 'badge badge-mute';
+  $('#footApFull').textContent = '';
+  sessionLog('Кошелёк отключён. Чтобы подключить снова — нажмите «Подключить кошелёк».','info');
+  route('home');
+}
+
+async function verifyContract(){
+  try{
+    sessionLog(`getCode(${short(CONFIG.CONTRACT_ADDRESS,8,6)}) — стучусь к RPC…`,'info');
+    // Используем НЕЗАВИСИМЫЙ публичный RPC для view-вызовов.
+    // MetaMask-провайдер на read-only вызовах часто залипает после Clear Permissions.
+    const provider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+
+    // Таймаут 10 секунд — иначе зависнем навсегда
+    const code = await Promise.race([
+      provider.getCode(CONFIG.CONTRACT_ADDRESS),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout 10s')), 10000))
+    ]);
+
+    if(!code || code==='0x'){
+      sessionLog(`По адресу ${short(CONFIG.CONTRACT_ADDRESS,8,6)} в сети Sepolia нет байткода контракта.`,'warning');
+      return false;
+    }
+    sessionLog(`✓ Контракт найден (${(code.length-2)/2} байт байткода)`,'success');
+    // Переключаем основной provider state на этот же публичный RPC для read-only вызовов,
+    // оставляя signer для write-операций
+    state.readProvider = provider;
+    state.vaultRO = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, VAULT_ABI, provider);
+    return true;
+  }catch(e){
+    sessionLog(`Не удалось проверить адрес контракта: ${parseError(e)}`,'warning');
+    console.error('verifyContract failed:', e);
+    return false;
+  }
+}
+
+async function silentReconnect(addr){
+  try{
+    sessionLog('Шаг 1/6: создаю BrowserProvider','info');
+    state.provider = new ethers.BrowserProvider(window.ethereum, 'any');
+
+    sessionLog('Шаг 2/6: получаю signer','info');
+    state.signer = await state.provider.getSigner();
+
+    sessionLog('Шаг 3/6: получаю адрес из signer','info');
+    state.user = await state.signer.getAddress();
+    sessionLog(`signer-адрес: ${short(state.user,8,6)}`,'info');
+
+    sessionLog('Шаг 4/6: создаю Contract instance','info');
+    state.vault = new ethers.Contract(CONFIG.CONTRACT_ADDRESS, VAULT_ABI, state.signer);
+
+    if(!(await ensureNetwork())){
+      toast('Не та сеть. Переключитесь на Sepolia.','warning');
+      sessionLog('Сеть не Sepolia — но продолжаю','warning');
+    }
+
+    sessionLog('Шаг 5/6: проверяю что по адресу контракта есть код','info');
+    await verifyContract();
+
+    sessionLog('Шаг 6/6: опрашиваю константы и роли','info');
+    await loadConstants();
+    await checkRoles();
+    await loadAncrMeta();
+    try{
+      state.activeVid = await state.vault.activeVaultId(state.user);
+      sessionLog(`activeVaultId = ${state.activeVid.toString()}`,'info');
+    }catch(e){
+      state.activeVid = 0n;
+      sessionLog(`activeVaultId упало: ${parseError(e)}`,'warning');
+    }
+
+    $('#btnConnect').textContent = short(state.user,6,4);
+    $('#btnConnect').classList.remove('btn-gold','btn-shimmer');
+    $('#btnConnect').classList.add('btn');
+    $('#btnConnect').onclick = ()=>disconnect();
+    $('#hContract').textContent = CONFIG.CONTRACT_ADDRESS;
+    $('#footEtherscan').href = `${CONFIG.EXPLORER}/address/${CONFIG.CONTRACT_ADDRESS}`;
+
+    await checkAntiphish();
+    await refreshMetrics();
+    sessionLog(`Сессия восстановлена для ${short(state.user,6,4)}`,'success');
+    route('home');
+  }catch(e){
+    sessionLog(`Авто-подключение упало: ${parseError(e)}. Попробуйте кнопку «Подключить кошелёк».`,'warning');
+    console.error('silentReconnect failed',e);
+    // Сбрасываем недозаполненный state, чтобы кнопка Connect снова работала
+    state.provider = state.signer = state.user = state.vault = null;
+    // Восстанавливаем read-only провайдер
+    try{state.provider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);}catch{}
+  }
+}
+
+async function loadConstants(){
+  try{
+    const v = state.vault;
+    const probes = [
+      ['VERSION',   ()=>v.VERSION()],
+      ['MIN_DEPOSIT', ()=>v.MIN_DEPOSIT()],
+      ['MIN_CODE_LENGTH', ()=>v.MIN_CODE_LENGTH()],
+      ['MAX_CODE_LENGTH', ()=>v.MAX_CODE_LENGTH()],
+      ['paused',    ()=>v.paused()]
+    ];
+    const out = {};
+    for(const [name, fn] of probes){
+      try{
+        out[name] = await fn();
+      }catch(e){
+        sessionLog(`view-функция ${name}() не сработала: ${parseError(e)}`,'warning');
+      }
+    }
+    state.consts = {
+      VERSION: out.VERSION ?? 43n,
+      MIN_DEPOSIT: out.MIN_DEPOSIT ?? ethers.parseUnits('0.01',18),
+      MIN_CODE_LENGTH: Number(out.MIN_CODE_LENGTH ?? 10n),
+      MAX_CODE_LENGTH: Number(out.MAX_CODE_LENGTH ?? 64n),
+      paused: out.paused ?? false
+    };
+    if(out.VERSION) sessionLog(`Контракт ответил: VERSION = ${out.VERSION}`,'info');
+  }catch(e){
+    sessionLog(`loadConstants упал: ${parseError(e)}`,'error');
+    console.warn('consts',e);
+  }
+}
+async function checkRoles(){
+  try{
+    const [cr, gd] = await Promise.all([state.vault.creator().catch(()=>null), state.vault.guardian().catch(()=>null)]);
+    state.isCreator = cr && cr.toLowerCase()===state.user.toLowerCase();
+    state.isGuardian = gd && gd.toLowerCase()===state.user.toLowerCase();
+  }catch(e){console.warn('roles',e);}
+}
+async function loadAncrMeta(){
+  try{
+    const erc = new ethers.Contract(CONFIG.ANCR_ADDRESS, ERC20_ABI, state.provider);
+    const [sym,dec] = await Promise.all([erc.symbol().catch(()=>'ANCR'), erc.decimals().catch(()=>18)]);
+    state.ancr = {address:CONFIG.ANCR_ADDRESS, symbol:sym, decimals:Number(dec)};
+    if(!state.knownTokens.find(x=>x.address.toLowerCase()===CONFIG.ANCR_ADDRESS.toLowerCase())){
+      state.knownTokens.unshift(state.ancr);
+    }
+  }catch(e){console.warn('ancr meta',e);}
+}
+
+/* ==========================================================================
+   4 метрики в хедере
+   ========================================================================== */
+async function refreshMetrics(){
+  if(!state.user){return;}
+  const errors = [];
+  try{
+    const ancr = new ethers.Contract(CONFIG.ANCR_ADDRESS, ERC20_ABI, state.provider);
+
+    // 1. Свободные ANCR
+    try{
+      const bal = await ancr.balanceOf(state.user);
+      $('#mFree').textContent = trim(fmtU(bal,18),3);
+    }catch(e){
+      $('#mFree').textContent = 'err';
+      errors.push(`свободные ANCR: ${parseError(e)}`);
+    }
+
+    // 2. Газ ETH
+    try{
+      const eth = await state.provider.getBalance(state.user);
+      $('#mGas').textContent = trim(fmtU(eth,18),5);
+    }catch(e){
+      $('#mGas').textContent = 'err';
+      errors.push(`баланс ETH: ${parseError(e)}`);
+    }
+
+    // 3. На якоре + 4. В сейфе всего — оба зависят от activeVaultId(state.user)
+    let activeVid = state.activeVid;
+    if(!activeVid || activeVid===0n){
+      try{
+        activeVid = await state.vault.activeVaultId(state.user);
+        state.activeVid = activeVid;
+      }catch(e){
+        errors.push(`activeVaultId не сработал: ${parseError(e)}. Возможно неверный адрес контракта или ABI.`);
+      }
+    }
+
+    let locked = 0n, vaultTotal='0', vaultSym='';
+    if(activeVid && activeVid!==0n && state.vault){
+      try{
+        const core = await state.vault.getVaultCore(state.user, activeVid);
+        const meta = await getTokenMeta(core[1]);
+        vaultTotal = trim(fmtU(core[2], meta.decimals),3);
+        vaultSym = ' '+meta.symbol;
+        if(core[1].toLowerCase()===CONFIG.ANCR_ADDRESS.toLowerCase()) locked = core[2];
+      }catch(e){
+        errors.push(`getVaultCore: ${parseError(e)}`);
+      }
+    }
+    $('#mLocked').textContent = locked ? trim(fmtU(locked,18),3) : '0';
+    $('#mVault').textContent = activeVid && activeVid!==0n ? (vaultTotal + vaultSym) : '0';
+
+    if(errors.length){
+      errors.forEach(e=>sessionLog('Метрика: '+e,'warning'));
+    }
+  }catch(e){
+    sessionLog(`refreshMetrics упал: ${parseError(e)}`,'error');
+    console.error('refreshMetrics',e);
+  }
+}
+
+/* ==========================================================================
+   Антифишинг
+   ========================================================================== */
+async function checkAntiphish(){
+  if(!state.activeVid || state.activeVid===0n){
+    $('#footAp').textContent = 'нет сейфа';
+    $('#footAp').className = 'badge badge-mute';
+    $('#footApFull').textContent = '';
+    return;
+  }
+  try{
+    const onchain = await state.vault.getAntiPhishHash(state.user, state.activeVid);
+    const key = `apv43_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
+    const saved = localStorage.getItem(key);
+    $('#footApFull').textContent = 'отпечаток: ' + onchain.slice(0,18) + '…';
+    if(!saved){
+      localStorage.setItem(key, onchain);
+      $('#footAp').textContent = 'сохранён';
+      $('#footAp').className = 'badge badge-success';
+      sessionLog('Антифишинг-отпечаток сохранён локально','info');
+    } else if(saved.toLowerCase() !== onchain.toLowerCase()){
+      $('#footAp').textContent = 'НЕ СОВПАДАЕТ';
+      $('#footAp').className = 'badge badge-warn';
+      $('#apOnchain').textContent = onchain;
+      $('#apSaved').textContent = saved;
+      $('#apBad').classList.remove('hidden');
+      document.body.classList.add('modal-open');
+      sessionLog('Внимание: антифишинг-отпечаток не совпадает','error');
+      $('#apTrust').onclick = ()=>{
+        localStorage.setItem(key, onchain);
+        $('#apBad').classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        $('#footAp').textContent = 'обновлён';
+        $('#footAp').className = 'badge badge-warn';
+        toast('Антифишинг-отпечаток обновлён','warning');
+      };
+      $('#apDeny').onclick = ()=>{
+        $('#apBad').classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        disconnect();
+      };
+    } else {
+      $('#footAp').textContent = '✓ совпадает';
+      $('#footAp').className = 'badge badge-success';
+    }
+  }catch(e){console.warn('antiphish',e);}
+}
+
+/* ==========================================================================
+   Чтение сейфа
+   ========================================================================== */
+async function readVault(user, vid){
+  const [core, tim, sec] = await Promise.all([
+    state.vault.getVaultCore(user, vid),
+    state.vault.getVaultTimings(user, vid),
+    state.vault.getVaultSecurity(user, vid)
+  ]);
+  const out = {
+    id: core[0], token: core[1], amount: core[2], name: core[3],
+    status: Number(core[4]), level: Number(core[5]), emergencyAddress: core[6],
+    lockedAt: tim[0], depositedAt: tim[1], lockedUntil: tim[2], voluntaryLockUntil: tim[3], timelockHours: Number(tim[4]),
+    failCount: Number(sec[0]), requiresCodeRotation: sec[1]
+  };
+  out.tokenMeta = await getTokenMeta(out.token);
+  return out;
+}
+const _tmCache = {};
+async function getTokenMeta(addr){
+  const k = addr.toLowerCase();
+  if(_tmCache[k]) return _tmCache[k];
+  try{
+    const erc = new ethers.Contract(addr, ERC20_ABI, state.provider || new ethers.JsonRpcProvider(CONFIG.RPC_URL));
+    const [sym,dec] = await Promise.all([erc.symbol().catch(()=>'TKN'), erc.decimals().catch(()=>18)]);
+    _tmCache[k] = {address:addr, symbol:sym, decimals:Number(dec)};
+    return _tmCache[k];
+  }catch{_tmCache[k]={address:addr,symbol:'TKN',decimals:18};return _tmCache[k];}
+}
+async function ensureAllowance(tokenAddr, amount){
+  const erc = new ethers.Contract(tokenAddr, ERC20_ABI, state.signer);
+  const cur = await erc.allowance(state.user, CONFIG.CONTRACT_ADDRESS);
+  if(cur >= amount) return true;
+  showLoading('Подтвердите разрешение…','Кошельку нужно одобрить расход токенов');
+  sessionLog('Запрашиваю разрешение на расход токенов','info');
+  const tx = await erc.approve(CONFIG.CONTRACT_ADDRESS, amount);
+  showLoading('Ждём подтверждение разрешения…','Approve', tx.hash);
+  await tx.wait();
+  hideLoading();
+  sessionLog('Разрешение получено','success');
+  toast('Разрешение получено','success');
+  return true;
+}
+
+/* ==========================================================================
+   Утилиты UI
+   ========================================================================== */
+const LEVEL_NAMES = ['SAFE','VAULT','FORTRESS'];
+const LEVEL_DESC  = [
+  'низкая комиссия, базовая защита',
+  'средние параметры',
+  'максимальная защита и лимит timelock'
+];
+const LEVEL_BADGE = ['badge-success','badge-info','badge-warn'];
+
+function statusBadge(s){
+  if(s===0) return '<span class="badge badge-success">Активен</span>';
+  if(s===1) return '<span class="badge badge-mute">Закрыт</span>';
+  return `<span class="badge badge-info">status=${s}</span>`;
+}
+
+/* Универсальное поле с глазком */
+function inputWithEye(id, type='password', placeholder='', maxlen=64){
+  return `<div class="relative">
+    <input id="${id}" type="${type}" autocomplete="new-password" spellcheck="false"
+      ${type==='password'?`minlength="10" maxlength="${maxlen}"`:''} placeholder="${esc(placeholder)}">
+    <button type="button" class="eye-btn" data-eye="${id}" tabindex="-1">👁</button>
+  </div>`;
+}
+function bindEyes(scope=document){
+  $$('button[data-eye]',scope).forEach(b=>{
+    b.onclick=()=>{
+      const inp = $('#'+b.getAttribute('data-eye'));
+      inp.type = inp.type==='password' ? 'text' : 'password';
+      b.textContent = inp.type==='password' ? '👁' : '🙈';
+    };
+  });
+}
+
+/* Поле кода с лейблом, обязательной звёздочкой и подсказкой */
+function codeField(id, labelText, tipText, required=true){
+  return `<div>
+    <label>${esc(labelText)}${required?'<span class="req">*</span>':''}<span class="tip" data-tip="${esc(tipText)}">?</span></label>
+    ${inputWithEye(id)}
+  </div>`;
+}
+
+/* Блок из 3 кодов V43 */
+function threeCodes(prefix='c'){
+  return `<div class="space-y-3">
+    ${codeField(prefix+'_code',  '🔑 Основной код',     'Длина 10–64 символа. Используется при пополнении, выводе, передаче и настройках.')}
+    ${codeField(prefix+'_anti',  '🛡 Антифишинг-фраза', 'Длина 10–64. Из неё считается отпечаток, который показывается на сайте — так вы проверяете, что не на фишинг-копии.')}
+    ${codeField(prefix+'_rec',   '🚨 Аварийный код',    'Длина 10–64. Только для аварийных операций (закрытие со штрафом, восстановление, смена кодов). Храните отдельно от основного.')}
+  </div>`;
+}
+function readThreeCodes(prefix='c'){
+  return {code:$('#'+prefix+'_code').value, anti:$('#'+prefix+'_anti').value, rec:$('#'+prefix+'_rec').value};
+}
+function validateCodes(obj){
+  for(const [k,v] of Object.entries(obj)){
+    const bytes = new TextEncoder().encode(v).length;
+    if(bytes<10) return 'Каждая фраза должна быть не короче 10 символов';
+    if(bytes>64) return 'Каждая фраза не длиннее 64 символов';
+  }
+  const set = new Set(Object.values(obj));
+  if(set.size < Object.values(obj).length) return 'Внимание: одинаковые фразы — это снижает защиту';
+  return null;
+}
+
+/* ==========================================================================
+   Роутер
+   ========================================================================== */
+const ROUTES = {
+  home:renderHome, open:renderOpen, deposit:renderDeposit, withdraw:renderWithdraw,
+  emergency:renderEmergency, settings:renderSettings,
+  transfers:renderTransfersHub, history:renderHistory
+};
+function route(name){
+  state.route = name;
+  $$('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.route===name));
+  $('#sidebar').classList.add('closed');
+  $('#sbBackdrop').classList.add('hidden');
+  const fn = ROUTES[name] || renderHome;
+  $('#pageContent').innerHTML = '<div class="text-text-3 text-sm py-10 text-center">Загрузка…</div>';
+  Promise.resolve(fn()).then(()=>{
+    bindTipsFocus($('#pageContent'));
+  }).catch(e=>{
+    console.error(e);
+    $('#pageContent').innerHTML = `<div class="card"><b class="text-warn">Ошибка отрисовки:</b> ${esc(e.message||String(e))}</div>`;
+  });
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Главная
+   ========================================================================== */
+async function renderHome(){
+  const root = $('#pageContent');
+  if(!state.user){
+    root.innerHTML = `
+      <div class="card text-center py-10" style="border-color:#D4AF37">
+        <div class="mb-4 flex justify-center">
+          <svg viewBox="0 0 64 64" width="96" height="96" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a2a2a"/><stop offset="100%" stop-color="#0f0f0f"/></linearGradient>
+              <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d77a"/><stop offset="50%" stop-color="#D4AF37"/><stop offset="100%" stop-color="#a07d1f"/></linearGradient>
+            </defs>
+            <rect x="3" y="6" width="58" height="54" rx="9" fill="url(#sb)" stroke="#D4AF37" stroke-width="1.4"/>
+            <path d="M 28 21 Q 28 15, 32 15 Q 36 15, 36 21" fill="none" stroke="url(#g2)" stroke-width="2"/>
+            <rect x="26" y="20" width="12" height="9" rx="1.5" fill="url(#g2)"/>
+            <rect x="30.7" y="28" width="2.6" height="18" fill="url(#g2)"/>
+            <rect x="24" y="32" width="16" height="2.4" rx="1" fill="url(#g2)"/>
+            <path d="M 17 44 Q 17 53, 32 54 Q 47 53, 47 44" fill="none" stroke="url(#g2)" stroke-width="3.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold mb-1 text-gold">AnchorVault V43</h1>
+        <p class="text-text-2 mb-5 text-sm">Подключите кошелёк, чтобы начать.<br>Сеть — Sepolia (тестовая).</p>
+        <button class="btn btn-gold btn-shimmer" onclick="connectWallet()">Подключить кошелёк</button>
+      </div>`;
+    return;
+  }
+  // загрузим vault
+  let v=null;
+  try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+  if(state.activeVid && state.activeVid!==0n){
+    try{v = await readVault(state.user, state.activeVid);}catch(e){console.warn('readVault',e);}
+  }
+  await refreshMetrics();
+  const wbClaim = await state.vault.welcomeBonusClaimed(state.user).catch(()=>false);
+  const wbAmt   = await state.vault.welcomeBonus().catch(()=>0n);
+  const fAttempts = await state.vault.totalFailedAttempts(state.user).catch(()=>0n);
+  const fUntil = await state.vault.frozenUntil(state.user).catch(()=>0n);
+
+  root.innerHTML = `
+    <div class="grid md:grid-cols-2 gap-4">
+
+      <!-- Кошелёк -->
+      <div class="card">
+        <div class="card-h"><h2>Кошелёк</h2><span class="badge badge-success">Sepolia</span></div>
+        <div class="space-y-2">
+          <div class="stat flex items-center justify-between">
+            <div><div class="stat-label">Адрес</div><div class="stat-value">${short(state.user,8,6)}</div></div>
+            <button class="btn btn-sm" onclick="navigator.clipboard.writeText('${state.user}');toast('Адрес скопирован','info',2000)">📋</button>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Welcome bonus</div>
+            <div class="stat-value ${wbClaim?'success':'gold'}">${wbClaim ? '✓ уже получен' : `доступен · ${trim(fmtU(wbAmt,18),4)} ANCR`}</div>
+          </div>
+          <button class="btn w-full" onclick="addAncrToWallet()">+ Добавить ANCR в кошелёк</button>
+        </div>
+      </div>
+
+      <!-- Vault -->
+      <div class="card">
+        <div class="card-h">
+          <h2>Активный сейф</h2>
+          ${v ? `<span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]||'?'}</span>` : ''}
+        </div>
+        ${!v ? `
+          <div class="text-text-2 text-sm py-6 text-center">
+            <div class="text-3xl mb-2">📭</div>
+            У вас пока нет сейфа.<br>
+            <button class="btn btn-gold btn-shimmer mt-3" onclick="route('open')">Открыть сейф</button>
+          </div>
+        ` : `
+          <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="stat"><div class="stat-label">№</div><div class="stat-value">#${v.id}</div></div>
+              <div class="stat"><div class="stat-label">Статус</div><div class="stat-value">${statusBadge(v.status)}</div></div>
+            </div>
+            <div class="stat"><div class="stat-label">Название</div><div class="stat-value">${esc(v.name)}</div></div>
+            <div class="stat"><div class="stat-label">Сумма</div><div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</div></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="stat"><div class="stat-label">Открыт</div><div class="stat-value text-xs">${fmtDate(v.depositedAt)}</div></div>
+              <div class="stat"><div class="stat-label">Доп. timelock</div><div class="stat-value">${v.timelockHours}ч</div></div>
+            </div>
+            <div class="stat"><div class="stat-label">Резервный адрес</div><div class="stat-value">${short(v.emergencyAddress,8,6)}</div></div>
+            ${Number(v.voluntaryLockUntil)>0 ? `<div class="stat"><div class="stat-label">Voluntary lock до</div><div class="stat-value warn">${fmtDate(v.voluntaryLockUntil)}</div></div>`:''}
+            ${v.requiresCodeRotation ? `<div class="stat" style="border-color:#FF8C00"><div class="stat-label warn">⚠ Нужна смена кодов</div><div class="stat-value"><button class="btn btn-warn btn-sm" onclick="route('settings')">Сменить</button></div></div>`:''}
+            ${v.failCount>0 ? `<div class="stat"><div class="stat-label">Неудачных попыток</div><div class="stat-value warn">${v.failCount}/50</div></div>`:''}
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <button class="btn btn-sm" onclick="route('deposit')">Пополнить</button>
+              <button class="btn btn-sm" onclick="route('withdraw')">Вывести</button>
+              <button class="btn btn-sm" onclick="route('transfers')">Передать</button>
+            </div>
+          </div>
+        `}
+      </div>
+    </div>
+
+    ${(Number(fAttempts)>0 || Number(fUntil)>0) ? `
+      <div class="card mt-4" style="border-color:#FF8C00">
+        <div class="card-h"><h2>⚠ Безопасность</h2></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="stat"><div class="stat-label">Глобально неудач</div><div class="stat-value warn">${fAttempts}</div></div>
+          <div class="stat"><div class="stat-label">Заморозка до</div><div class="stat-value">${fmtDate(fUntil)}</div></div>
+        </div>
+        ${Number(fAttempts)>0 ? `<button class="btn mt-3" onclick="callReset()">Сбросить счётчик (через 30 дней без активности)</button>`:''}
+      </div>
+    `:''}
+  `;
+}
+async function callReset(){
+  await txCall('Сбросить счётчик попыток', state.vault.resetFailedAttempts());
+  route('home');
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Открыть сейф
+   ========================================================================== */
+async function renderOpen(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+  if(state.activeVid && state.activeVid!==0n){
+    root.innerHTML = `
+      <div class="card text-center" style="border-color:#FF8C00">
+        <div class="text-3xl mb-2">⚠</div>
+        <div class="font-bold mb-1 text-warn">У вас уже есть активный сейф</div>
+        <p class="text-text-2 text-sm mb-4">Один пользователь может иметь только один открытый сейф. Закройте его или дождитесь смены кодов, чтобы открыть новый.</p>
+        <button class="btn" onclick="route('home')">К главной</button>
+      </div>`;
+    return;
+  }
+  if(!state.tosAccepted) showTOS();
+  const minDep = state.consts.MIN_DEPOSIT ?? ethers.parseUnits('0.01',18);
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h">
+        <h2>➕ Открыть новый сейф</h2>
+        <span class="badge badge-gold">${state.consts.MIN_CODE_LENGTH||10}–${state.consts.MAX_CODE_LENGTH||64} символов на фразу</span>
+      </div>
+
+      <div class="space-y-3 mb-5">
+        <div>
+          <label>Название сейфа<span class="req">*</span><span class="tip" data-tip="Любое имя, до 50 символов. Хранится в контракте. Для удобства, как «Сейф для отпуска» или «Пенсионные».">?</span></label>
+          <input id="op_name" maxlength="50" placeholder="Например: Долгосрочные сбережения">
+        </div>
+
+        <div>
+          <label>Уровень защиты<span class="req">*</span><span class="tip" data-tip="SAFE — самый простой, одна фраза. VAULT — золотая середина, две фразы. FORTRESS — максимальная защита, три раздельные фразы.">?</span></label>
+          <div class="grid grid-cols-3 gap-2 mt-2" id="op_level_buttons">
+            <button type="button" class="lvl-card lvl-safe" data-lvl="0">
+              <div class="lvl-ico">🛡</div>
+              <div class="lvl-name">SAFE</div>
+              <div class="lvl-tag">ЛЁГКИЙ</div>
+              <div class="lvl-desc">2 фразы · 0.5%</div>
+            </button>
+            <button type="button" class="lvl-card lvl-vault active" data-lvl="1">
+              <div class="lvl-ico">🏛</div>
+              <div class="lvl-name">VAULT</div>
+              <div class="lvl-tag">СРЕДНИЙ</div>
+              <div class="lvl-desc">2 фразы · 1.5%</div>
+            </button>
+            <button type="button" class="lvl-card lvl-fortress" data-lvl="2">
+              <div class="lvl-ico">🏰</div>
+              <div class="lvl-name">FORTRESS</div>
+              <div class="lvl-tag">МАКСИМУМ</div>
+              <div class="lvl-desc">3 фразы · 2.0%</div>
+            </button>
+          </div>
+          <input type="hidden" id="op_level" value="1">
+        </div>
+
+        <div>
+          <label>Токен<span class="req">*</span><span class="tip" data-tip="ANCR — основной токен. Можно использовать любой токен, добавленный создателем в whitelist.">?</span></label>
+          <select id="op_token"></select>
+        </div>
+
+        <div>
+          <label>Сумма<span class="req">*</span><span class="tip" data-tip="Минимум 0.01. Из суммы будет вычтена комиссия уровня — её получите вы в виде net-баланса сейфа.">?</span></label>
+          <input id="op_amount" type="text" inputmode="decimal" placeholder="0.0">
+          <div class="hint">Минимум: <b>${trim(fmtU(minDep,18),6)}</b></div>
+        </div>
+
+        <div>
+          <label>Резервный адрес<span class="req">*</span><span class="tip" data-tip="Адрес, на который пойдут средства при «Восстановить в резерв» (10% штраф). Должен отличаться от вашего и не быть адресом контракта.">?</span></label>
+          <input id="op_em" class="mono" placeholder="0x…">
+          <div class="hint">Это адрес запасного кошелька — на случай потери основного</div>
+        </div>
+      </div>
+
+      <div class="card-h"><h2 class="text-sm" id="op_codes_title">🔐 Две фразы для управления сейфом</h2></div>
+      <div id="op_lvl_note" class="bg-bg-2 border border-warn/30 rounded-lg p-3 mb-3 text-xs text-warn"></div>
+      <div id="op_codes_block"></div>
+
+      <div class="mt-5 p-3 bg-bg-2 rounded-lg border border-border">
+        <div class="text-xs text-text-3 mb-1">Будет списано с вашего кошелька:</div>
+        <div id="op_total" class="text-lg font-bold mono">—</div>
+        <div class="text-xs text-text-3 mt-1">Сейф получит net = сумма − комиссия уровня</div>
+      </div>
+
+      <label class="flex items-center gap-2 mt-4 text-sm normal-case font-normal" style="text-transform:none;letter-spacing:0;font-size:13px;color:#e8e8e8">
+        <input type="checkbox" id="op_tos" class="w-auto" style="width:auto"> Я ознакомлен с Условиями и понимаю риски
+      </label>
+
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <button class="btn" id="op_approve">Шаг 1: Approve</button>
+        <button class="btn btn-gold btn-shimmer" id="op_submit" disabled>Шаг 2: Открыть сейф</button>
+      </div>
+    </div>
+  `;
+  bindEyes(root);
+
+  // токены
+  const sel = $('#op_token'); sel.innerHTML = '';
+  state.knownTokens.forEach(t=>{
+    const opt = document.createElement('option');
+    opt.value = t.address; opt.textContent = `${t.symbol} — ${short(t.address,6,4)}`;
+    sel.appendChild(opt);
+  });
+  if(sel.options.length===0){
+    const opt = document.createElement('option');
+    opt.value = CONFIG.ANCR_ADDRESS; opt.textContent = `ANCR — ${short(CONFIG.ANCR_ADDRESS,6,4)}`;
+    sel.appendChild(opt);
+  }
+
+  // Динамический рендер полей кодов по уровню
+  // SAFE & VAULT — 2 поля (Код + Антифишинг), recovery = antiPhrase на сабмите
+  // FORTRESS — 3 поля (все независимые)
+  function renderCodesForLevel(){
+    const lvl = Number($('#op_level').value);
+    const titles = [
+      '🔐 Две фразы (SAFE)',
+      '🔐 Две фразы (VAULT)',
+      '🔐 Три независимые фразы (FORTRESS)'
+    ];
+    const notes = [
+      'SAFE — две фразы. <b>Основной код</b> для пополнения/вывода/настроек, <b>антифишинг</b> для проверки подлинности сайта и для аварийного вывода. Базовая защита по минимальной цене (0.5%).',
+      'VAULT — две фразы как у SAFE, но <b>выше комиссия (1.5%)</b> и больший лимит дополнительного timelock. Для среднесрочных сбережений.',
+      '<b>FORTRESS — три независимые фразы.</b> Аварийный код отделён от антифишинга — даже если оба основных утекли, аварийный остаётся последней линией защиты. Запишите все три фразы и храните раздельно. Если потеряете аварийный код — средства можно будет вернуть только через основной flow.'
+    ];
+    $('#op_codes_title').textContent = titles[lvl];
+    $('#op_lvl_note').innerHTML = '⚠ ' + notes[lvl];
+
+    const block = $('#op_codes_block');
+    if(lvl === 2){
+      // FORTRESS: 3 поля
+      block.innerHTML = `<div class="space-y-3">
+        ${codeField('op_code','🔑 Основной код','Длина 10–64 символа. Для пополнения, вывода, передачи, настроек. Сохраните надёжно.')}
+        ${codeField('op_anti','🛡 Антифишинг-фраза','Длина 10–64. Из неё считается отпечаток, который показывается на сайте — так вы проверяете, что не на фишинг-копии.')}
+        ${codeField('op_rec','🚨 Аварийный код','Длина 10–64. Только для аварийных операций. Храните отдельно от основного и антифишинга.')}
+      </div>`;
+    } else {
+      // SAFE и VAULT: 2 поля. Recovery будет = antiPhrase при сабмите.
+      block.innerHTML = `<div class="space-y-3">
+        ${codeField('op_code','🔑 Основной код','Длина 10–64 символа. Для пополнения, вывода, передачи, настроек. Сохраните надёжно.')}
+        ${codeField('op_anti','🛡 Антифишинг-фраза','Длина 10–64. Используется и для проверки подлинности сайта, и для аварийного вывода. Сохраните отдельно от основного кода.')}
+      </div>`;
+    }
+    bindEyes(block);
+    bindTipsFocus(block);
+  }
+
+  // выбор уровня — переключение карточек + перерисовка полей
+  $$('#op_level_buttons button').forEach(b=>{
+    b.onclick = ()=>{
+      $$('#op_level_buttons button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      $('#op_level').value = b.dataset.lvl;
+      recalc();
+      renderCodesForLevel();
+    };
+  });
+  // первичный рендер кодов под текущий (по умолчанию VAULT)
+  renderCodesForLevel();
+
+  function recalc(){
+    const lvl = Number($('#op_level').value);
+    const amt = $('#op_amount').value.trim();
+    if(!amt){$('#op_total').textContent='—';return;}
+    try{
+      const meta = state.knownTokens.find(x=>x.address.toLowerCase()===sel.value.toLowerCase()) || state.ancr;
+      const a = ethers.parseUnits(amt, meta.decimals);
+      const fee = a * BigInt([50,150,200][lvl]) / 10000n;
+      const net = a - fee;
+      $('#op_total').innerHTML = `<span class="text-gold">${trim(fmtU(a,meta.decimals),6)} ${esc(meta.symbol)}</span><div class="text-xs text-text-3 mt-1">в сейф: ${trim(fmtU(net,meta.decimals),6)} · комиссия: ${trim(fmtU(fee,meta.decimals),6)}</div>`;
+    }catch{$('#op_total').textContent='—';}
+  }
+  ['op_amount','op_token'].forEach(id=>$('#'+id).addEventListener('input',recalc));
+
+  // approve
+  let approved = false;
+  $('#op_approve').onclick = async ()=>{
+    const amt = $('#op_amount').value.trim();
+    if(!amt) return toast('Сначала укажите сумму','warning');
+    const meta = state.knownTokens.find(x=>x.address.toLowerCase()===sel.value.toLowerCase()) || state.ancr;
+    let wei; try{wei = ethers.parseUnits(amt, meta.decimals);}catch{return toast('Неверная сумма','warning');}
+    try{
+      await ensureAllowance(sel.value, wei);
+      approved = true;
+      $('#op_approve').textContent = '✓ Approved';
+      $('#op_approve').classList.add('btn-success');
+      $('#op_submit').disabled = false;
+    }catch(e){toast(parseError(e),'error');}
+  };
+
+  // submit
+  $('#op_submit').onclick = async ()=>{
+    if(!$('#op_tos').checked) return toast('Подтвердите согласие с условиями','warning');
+    const name = $('#op_name').value.trim();
+    if(!name) return toast('Введите название','warning');
+    const lvl = Number($('#op_level').value);
+    const tok = sel.value;
+    const meta = state.knownTokens.find(x=>x.address.toLowerCase()===tok.toLowerCase()) || state.ancr;
+    const em = $('#op_em').value.trim();
+    if(!ethers.isAddress(em)) return toast('Неверный резервный адрес','warning');
+    if(em.toLowerCase()===state.user.toLowerCase()) return toast('Резервный адрес не должен совпадать с вашим','warning');
+    if(em.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Резервный адрес не может быть адресом контракта','warning');
+    const amt = $('#op_amount').value.trim();
+    let wei; try{wei = ethers.parseUnits(amt, meta.decimals);}catch{return toast('Неверная сумма','warning');}
+
+    // Собираем коды в зависимости от уровня
+    // SAFE / VAULT: 2 поля от пользователя, recovery подставляется = antiPhrase
+    // FORTRESS: 3 раздельных поля
+    const codeVal = $('#op_code')?.value || '';
+    const antiVal = $('#op_anti')?.value || '';
+    const recVal  = lvl === 2 ? ($('#op_rec')?.value || '') : antiVal;
+    const c = {code: codeVal, anti: antiVal, rec: recVal};
+
+    // Валидация: 10–64 байт на каждую введённую фразу
+    const userFields = lvl === 2 ? {code: c.code, anti: c.anti, rec: c.rec} : {code: c.code, anti: c.anti};
+    for(const [k, v] of Object.entries(userFields)){
+      const bytes = new TextEncoder().encode(v).length;
+      if(bytes < 10) return toast('Каждая фраза должна быть не короче 10 символов','warning');
+      if(bytes > 64) return toast('Каждая фраза не длиннее 64 символов','warning');
+    }
+    // Предупреждение если у FORTRESS совпадают
+    if(lvl === 2){
+      const set = new Set([c.code, c.anti, c.rec]);
+      if(set.size < 3){
+        if(!confirm('У FORTRESS все три фразы должны различаться для максимальной защиты. Сейчас есть одинаковые. Открыть всё равно?')) return;
+      }
+    } else {
+      // SAFE/VAULT: основной код и антифишинг должны различаться
+      if(c.code === c.anti){
+        if(!confirm('Основной код и антифишинг-фраза одинаковые — это снижает защиту. Открыть всё равно?')) return;
+      }
+    }
+
+    const ok = await confirmModal('Подтвердите открытие сейфа',`
+      <div class="space-y-1">
+        <div>Сумма: <b class="text-gold">${trim(fmtU(wei,meta.decimals),6)} ${esc(meta.symbol)}</b></div>
+        <div>Уровень: <b>${LEVEL_NAMES[lvl]}</b> · ${LEVEL_DESC[lvl]}</div>
+        <div>Резервный: <span class="mono text-xs">${esc(em)}</span></div>
+        <div class="text-warn text-xs mt-2">⚠ ${lvl===2 ? 'Запомните все 3 фразы!' : 'Запомните обе фразы!'} Без них доступ только через аварийный вывод со штрафом.</div>
+      </div>`);
+    if(!ok) return;
+    const params = {name, code:c.code, antiPhrase:c.anti, recovery:c.rec, amount:wei, emergencyAddress:em};
+    const rc = await txCall('Открыть сейф', state.vault.openVault(tok, params, lvl));
+    if(rc){
+      try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+      await checkAntiphish();
+      await refreshMetrics();
+      ['op_name','op_amount','op_em','op_code','op_anti','op_rec'].forEach(id=>{if($('#'+id))$('#'+id).value='';});
+      route('home');
+    }
+  };
+}
+function showTOS(){
+  $('#tosModal').classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  $('#tosCheck').checked = false;
+  $('#tosAccept').disabled = true;
+  $('#tosCheck').onchange = e=>$('#tosAccept').disabled = !e.target.checked;
+  $('#tosAccept').onclick = ()=>{
+    localStorage.setItem('av_tos43','1');
+    state.tosAccepted = true;
+    $('#tosModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+    sessionLog('Условия приняты','info');
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Пополнить
+   ========================================================================== */
+async function renderDeposit(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  if(!state.activeVid || state.activeVid===0n){
+    root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа<br><button class="btn btn-gold mt-3" onclick="route('open')">Открыть</button></div>`;
+    return;
+  }
+  const v = await readVault(state.user, state.activeVid);
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h"><h2>📥 Пополнить сейф</h2><span class="badge badge-info">${LEVEL_NAMES[v.level]}</span></div>
+      <div class="space-y-3">
+        <div class="stat">
+          <div class="stat-label">Текущий баланс сейфа</div>
+          <div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</div>
+        </div>
+        <div>
+          <label>Сумма пополнения<span class="req">*</span><span class="tip" data-tip="Из суммы будет вычтена депозит-комиссия уровня сейфа.">?</span></label>
+          <input id="dp_amt" type="text" inputmode="decimal" placeholder="0.0">
+        </div>
+        ${codeField('dp_code','🔑 Основной код','Длина 10–64. Используется для подтверждения операции.')}
+        <button class="btn btn-gold btn-shimmer w-full mt-2" id="dp_submit">Пополнить</button>
+      </div>
+    </div>
+  `;
+  bindEyes(root);
+  $('#dp_submit').onclick = async ()=>{
+    const a = $('#dp_amt').value.trim();
+    const code = $('#dp_code').value;
+    if(!a) return toast('Укажите сумму','warning');
+    let wei; try{wei = ethers.parseUnits(a, v.tokenMeta.decimals);}catch{return toast('Неверная сумма','warning');}
+    try{await ensureAllowance(v.token, wei);}catch(e){return toast(parseError(e),'error');}
+    const rc = await txCall('Пополнить сейф', state.vault.depositToVault(state.activeVid, wei, code));
+    if(rc){await refreshMetrics();route('home');}
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Вывести
+   ========================================================================== */
+async function renderWithdraw(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  if(!state.activeVid || state.activeVid===0n){
+    root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
+    return;
+  }
+  const v = await readVault(state.user, state.activeVid);
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h"><h2>📤 Вывести из сейфа</h2><span class="badge badge-info">комиссия 0.5%</span></div>
+      <p class="text-text-2 text-sm mb-4">Операция мгновенная. Средства уйдут на указанный адрес сразу после подтверждения.</p>
+      <div class="space-y-3">
+        <div class="stat">
+          <div class="stat-label">В сейфе</div>
+          <div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</div>
+        </div>
+        <div>
+          <label>Сумма<span class="req">*</span><span class="tip" data-tip="Сумма для вывода. Не больше баланса сейфа. Из неё будет удержана комиссия 0.5%.">?</span></label>
+          <input id="wd_amt" type="text" inputmode="decimal" placeholder="0.0">
+          <button class="btn btn-sm mt-1" onclick="$('#wd_amt').value='${fmtU(v.amount,v.tokenMeta.decimals)}';$('#wd_amt').dispatchEvent(new Event('input'))">Вывести всё</button>
+        </div>
+        <div>
+          <label>Куда отправить<span class="req">*</span><span class="tip" data-tip="Адрес получателя. По умолчанию — ваш адрес. Можно указать любой другой.">?</span></label>
+          <input id="wd_to" class="mono" placeholder="0x…" value="${state.user}">
+        </div>
+        ${codeField('wd_code','🔑 Основной код','Длина 10–64.')}
+        ${codeField('wd_anti','🛡 Антифишинг-фраза','Длина 10–64. Подтверждение, что вы — не фишер.')}
+        <div class="bg-bg-2 border border-border rounded-lg p-3 text-xs">
+          <span class="text-text-3">Получите примерно:</span>
+          <span id="wd_preview" class="text-gold font-bold mono ml-2">—</span>
+        </div>
+        <button class="btn btn-gold btn-shimmer w-full" id="wd_submit">Вывести</button>
+      </div>
+    </div>
+  `;
+  bindEyes(root);
+  $('#wd_amt').addEventListener('input',()=>{
+    const a = $('#wd_amt').value.trim();
+    if(!a){$('#wd_preview').textContent='—';return;}
+    try{
+      const wei = ethers.parseUnits(a, v.tokenMeta.decimals);
+      const fee = wei * 50n / 10000n;
+      const net = wei - fee;
+      $('#wd_preview').textContent = `${trim(fmtU(net,v.tokenMeta.decimals),6)} ${v.tokenMeta.symbol} (комиссия ${trim(fmtU(fee,v.tokenMeta.decimals),6)})`;
+    }catch{$('#wd_preview').textContent='—';}
+  });
+  $('#wd_submit').onclick = async ()=>{
+    const a = $('#wd_amt').value.trim();
+    const to = $('#wd_to').value.trim();
+    if(!a) return toast('Укажите сумму','warning');
+    if(!ethers.isAddress(to)) return toast('Неверный адрес получателя','warning');
+    let wei; try{wei = ethers.parseUnits(a, v.tokenMeta.decimals);}catch{return toast('Неверная сумма','warning');}
+    if(wei > v.amount) return toast('Сумма больше баланса сейфа','warning');
+    const code = $('#wd_code').value, anti = $('#wd_anti').value;
+    const ok = await confirmModal('Подтвердите вывод',`Отправить <b class="text-gold">${a} ${esc(v.tokenMeta.symbol)}</b> на ${short(to,8,6)}? Комиссия 0.5%.`);
+    if(!ok) return;
+    const rc = await txCall('Вывод из сейфа', state.vault.withdrawFromVault(state.activeVid, wei, to, code, anti));
+    if(rc){await refreshMetrics();route('home');}
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Передать сейф
+   ========================================================================== */
+/* ==========================================================================
+   СТРАНИЦА: Переводы (хаб с двумя режимами)
+   - Tab "Простой"     — обычный ERC-20 transfer (быстро, без защиты сейфа)
+   - Tab "Под защитой" — transferVault: передача активного сейфа другому пользователю
+   ========================================================================== */
+async function renderTransfersHub(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+
+  // Какой таб открыть по умолчанию? Если есть активный сейф — оставляем последний выбор пользователя,
+  // если сейфа нет — принудительно "простой".
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  const hasVault = !!(state.activeVid && state.activeVid!==0n);
+  let mode = localStorage.getItem('av_tab_transfers') || 'simple';
+  if(!hasVault) mode = 'simple';
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h">
+        <h2>💸 Переводы</h2>
+        <div class="text-xs text-text-3">Два режима: обычный или с защитой сейфа</div>
+      </div>
+
+      <!-- Табы режимов -->
+      <div class="grid grid-cols-2 gap-2 mb-4" id="tx_tabs">
+        <button type="button" class="tx-tab ${mode==='simple'?'active':''}" data-mode="simple">
+          <div class="tx-tab-ico">⚡</div>
+          <div class="tx-tab-title">Простой перевод</div>
+          <div class="tx-tab-sub">Обычный ERC-20 · мгновенно</div>
+        </button>
+        <button type="button" class="tx-tab tx-tab-shield ${mode==='vault'?'active':''}" data-mode="vault" ${hasVault?'':'disabled'}>
+          <div class="tx-tab-ico">🛡</div>
+          <div class="tx-tab-title">Под защитой</div>
+          <div class="tx-tab-sub">${hasVault?'Передать сейф · 0.5%':'Нужен активный сейф'}</div>
+        </button>
+      </div>
+
+      <div id="tx_content"></div>
+    </div>
+  `;
+
+  // Стили табов локально (один раз вставлять — внутри #tx_tabs)
+  if(!document.getElementById('tx_tab_styles')){
+    const st = document.createElement('style');
+    st.id = 'tx_tab_styles';
+    st.textContent = `
+      .tx-tab{
+        background:#1a1a1a;border:1px solid #3a3a3a;border-radius:10px;
+        padding:14px 12px;cursor:pointer;transition:all .15s;text-align:center;
+        font-family:inherit;color:#a0a0a0;display:flex;flex-direction:column;align-items:center;gap:3px;
+      }
+      .tx-tab:hover:not(:disabled){border-color:#5da3d5;transform:translateY(-1px)}
+      .tx-tab:disabled{opacity:.4;cursor:not-allowed}
+      .tx-tab-ico{font-size:22px;line-height:1}
+      .tx-tab-title{font-weight:800;font-size:13px;letter-spacing:.04em;color:#e8e8e8}
+      .tx-tab-sub{font-size:10px;color:#6a6a6a}
+      .tx-tab.active{background:rgba(93,163,213,.12);border-color:#5da3d5}
+      .tx-tab.active .tx-tab-title{color:#5da3d5}
+      /* «Под защитой» активный — золотой */
+      .tx-tab-shield.active{background:rgba(212,175,55,.12);border-color:#D4AF37}
+      .tx-tab-shield.active .tx-tab-title{color:#D4AF37}
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Переключение табов
+  $$('#tx_tabs button').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.disabled) return;
+      const m = b.dataset.mode;
+      mode = m;
+      localStorage.setItem('av_tab_transfers', m);
+      $$('#tx_tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderMode();
+    };
+  });
+
+  // Рендер выбранного режима
+  function renderMode(){
+    const c = $('#tx_content');
+    if(mode === 'simple') renderSimpleSend(c);
+    else renderProtectedTransfer(c);
+  }
+  renderMode();
+}
+
+/* === Простой перевод (обычный ERC-20) === */
+async function renderSimpleSend(host){
+  const ancr = new ethers.Contract(CONFIG.ANCR_ADDRESS, ERC20_ABI, state.provider);
+  const ancrBal = await ancr.balanceOf(state.user).catch(()=>0n);
+
+  host.innerHTML = `
+    <div class="bg-bg-2 border border-info/30 rounded-lg p-3 mb-4 text-xs text-info" style="border-color:rgba(93,163,213,.4)">
+      ⚡ <b>Простой перевод</b> — обычная ERC-20 транзакция. Без участия сейфа, без комиссии за защиту. Подходит для быстрых переводов между своими кошельками или другому человеку.
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label>Токен<span class="tip" data-tip="ANCR или адрес любого ERC-20 токена. Кнопка ниже позволяет добавить нестандартный токен.">?</span></label>
+        <select id="tf_token">
+          <option value="${CONFIG.ANCR_ADDRESS}">ANCR · баланс: ${trim(fmtU(ancrBal,18),3)}</option>
+        </select>
+        <button class="btn btn-sm mt-2" id="tf_add_custom">+ Другой токен</button>
+      </div>
+      <div>
+        <label>Адрес получателя<span class="req">*</span></label>
+        <input id="tf_to" class="mono" placeholder="0x…">
+      </div>
+      <div>
+        <label>Сумма<span class="req">*</span></label>
+        <input id="tf_amt" type="text" inputmode="decimal" placeholder="0.0">
+        <div class="hint" id="tf_hint">Баланс: ${trim(fmtU(ancrBal,18),6)} ANCR</div>
+      </div>
+      <button class="btn btn-gold btn-shimmer w-full" id="tf_submit">⚡ Отправить</button>
+    </div>
+  `;
+  bindTipsFocus(host);
+
+  $('#tf_add_custom').onclick = async ()=>{
+    const a = await inputAddressModal('Адрес токена','Введите адрес любого ERC-20 токена (например USDT, WETH или ваш кастомный).','');
+    if(!a) return;
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    try{
+      const erc = new ethers.Contract(a, ERC20_ABI, state.provider);
+      const [sym,dec,bal] = await Promise.all([
+        erc.symbol().catch(()=>'TKN'), erc.decimals().catch(()=>18), erc.balanceOf(state.user).catch(()=>0n)
+      ]);
+      const opt = document.createElement('option');
+      opt.value = a;
+      opt.textContent = `${sym} · ${trim(fmtU(bal,Number(dec)),3)} · ${short(a,6,4)}`;
+      opt.dataset.dec = Number(dec);
+      opt.dataset.sym = sym;
+      opt.dataset.bal = bal.toString();
+      $('#tf_token').appendChild(opt);
+      $('#tf_token').value = a;
+      $('#tf_hint').textContent = `Баланс: ${trim(fmtU(bal,Number(dec)),6)} ${sym}`;
+    }catch(e){toast(parseError(e),'error');}
+  };
+  $('#tf_token').onchange = ()=>{
+    const a = $('#tf_token').value;
+    const opt = $('#tf_token').selectedOptions[0];
+    if(a===CONFIG.ANCR_ADDRESS){
+      $('#tf_hint').textContent = `Баланс: ${trim(fmtU(ancrBal,18),6)} ANCR`;
+    } else if(opt.dataset.bal){
+      $('#tf_hint').textContent = `Баланс: ${trim(fmtU(BigInt(opt.dataset.bal),Number(opt.dataset.dec)),6)} ${opt.dataset.sym}`;
+    }
+  };
+  $('#tf_submit').onclick = async ()=>{
+    const tk = $('#tf_token').value;
+    const opt = $('#tf_token').selectedOptions[0];
+    const dec = Number(opt.dataset.dec || 18);
+    const sym = opt.dataset.sym || 'ANCR';
+    const to = $('#tf_to').value.trim();
+    const a = $('#tf_amt').value.trim();
+    if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
+    if(!a) return toast('Укажите сумму','warning');
+    let wei; try{wei = ethers.parseUnits(a,dec);}catch{return toast('Неверная сумма','warning');}
+    const ok = await confirmModal('Отправить?',`<b>${a} ${esc(sym)}</b> на <span class="mono text-xs">${esc(to)}</span>`);
+    if(!ok) return;
+    const erc = new ethers.Contract(tk, ERC20_ABI, state.signer);
+    const rc = await txCall(`Отправить ${a} ${sym}`, erc.transfer(to, wei));
+    if(rc){await refreshMetrics();$('#tf_to').value='';$('#tf_amt').value='';}
+  };
+}
+
+/* === Перевод под защитой (transferVault — передача сейфа) === */
+async function renderProtectedTransfer(host){
+  if(!state.activeVid || state.activeVid===0n){
+    host.innerHTML = `<div class="text-center text-text-2 text-sm py-6"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
+    return;
+  }
+  const v = await readVault(state.user, state.activeVid);
+  const isLite = v.level !== 2;
+  const fraseCount = v.level === 2 ? 'три' : 'две';
+
+  host.innerHTML = `
+    <div class="bg-bg-2 border rounded-lg p-3 mb-4 text-xs text-warn" style="border-color:rgba(212,175,55,.4)">
+      🛡 <b>Перевод под защитой</b> — передача сейфа другому пользователю. Сейф с балансом <b class="text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</b> полностью перейдёт получателю. Комиссия 0.5%. Уровень <b>${LEVEL_NAMES[v.level]}</b> сохраняется.
+    </div>
+    <div class="bg-bg-2 border border-warn/30 rounded-lg p-3 mb-4 text-xs text-warn">
+      ⚠ <b>Это однократная операция.</b> Получатель получит ${fraseCount} <b>новые фразы</b>, которые вы зададите ниже — передайте их ему отдельно (Signal, лично, бумага). Без них он не сможет управлять сейфом.
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label>Адрес получателя<span class="req">*</span><span class="tip" data-tip="У получателя не должно быть своего активного сейфа.">?</span></label>
+        <input id="tr_to" class="mono" placeholder="0x…">
+      </div>
+      <div class="card-h"><h2 class="text-sm">Ваши текущие фразы (подтверждение)</h2></div>
+      ${codeField('tr_code','🔑 Ваш основной код','Подтверждение операции.')}
+      ${codeField('tr_anti','🛡 Ваша антифишинг-фраза','Подтверждение операции.')}
+      <div class="card-h"><h2 class="text-sm">Новые фразы для получателя</h2></div>
+      ${codeField('trn_code','🔑 Новый основной код','Длина 10–64.')}
+      ${codeField('trn_anti','🛡 Новая антифишинг-фраза', isLite
+        ? 'Длина 10–64. На уровне ' + LEVEL_NAMES[v.level] + ' она же работает как аварийный код для получателя.'
+        : 'Длина 10–64. Используется получателем при подтверждении.')}
+      ${v.level === 2 ? codeField('trn_rec','🚨 Новый аварийный код','Длина 10–64. Отдельная аварийная фраза только для получателя.') : ''}
+      <button class="btn btn-gold btn-shimmer w-full mt-2" id="tr_submit">🛡 Передать сейф</button>
+    </div>
+  `;
+  bindEyes(host);
+  bindTipsFocus(host);
+
+  $('#tr_submit').onclick = async ()=>{
+    const to = $('#tr_to').value.trim();
+    if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
+    if(to.toLowerCase()===state.user.toLowerCase()) return toast('Нельзя передать самому себе','warning');
+    if(to.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Нельзя передать контракту','warning');
+    try{
+      const recVid = await state.vault.activeVaultId(to);
+      if(recVid && recVid!==0n) return toast('У получателя уже есть активный сейф','warning');
+    }catch{}
+    const code = $('#tr_code').value, anti = $('#tr_anti').value;
+    const newCode = $('#trn_code').value;
+    const newAnti = $('#trn_anti').value;
+    const newRec  = v.level === 2 ? ($('#trn_rec')?.value || '') : newAnti;
+    for(const f of [newCode, newAnti, ...(v.level===2?[newRec]:[])]){
+      const b = new TextEncoder().encode(f).length;
+      if(b<10) return toast('Каждая новая фраза должна быть не короче 10 символов','warning');
+      if(b>64) return toast('Каждая новая фраза не длиннее 64 символов','warning');
+    }
+    const ok = await confirmModal('Передать сейф?',`
+      <div>Адрес: <span class="mono text-xs">${esc(to)}</span></div>
+      <div>Сумма: <b class="text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</b></div>
+      <div class="text-warn text-xs mt-2">⚠ Не забудьте передать новые фразы получателю отдельно!</div>`);
+    if(!ok) return;
+    const nc = {newCode, newAntiPhrase:newAnti, newRecovery:newRec};
+    const rc = await txCall('Передать сейф под защитой', state.vault.transferVault(state.activeVid, to, code, anti, nc));
+    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Аварийный
+   ========================================================================== */
+async function renderEmergency(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  if(!state.activeVid || state.activeVid===0n){
+    root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
+    return;
+  }
+  const v = await readVault(state.user, state.activeVid);
+
+  const isLite = v.level !== 2; // SAFE/VAULT — recovery = antiPhrase
+  const recLabel = isLite ? '🛡 Антифишинг-фраза' : '🚨 Аварийный код';
+  const recTip = isLite
+    ? `На уровне ${LEVEL_NAMES[v.level]} аварийная роль совпадает с антифишинг-фразой. Введите её.`
+    : 'Длина 10–64. Та самая аварийная фраза, заданная при открытии сейфа.';
+
+  root.innerHTML = `
+    <div class="card mb-4" style="border-color:#FF8C00">
+      <div class="card-h"><h2>🚨 Аварийные операции</h2><span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span></div>
+      <p class="text-sm text-text-2">
+        Используйте эти кнопки, только если потеряли основной код или скомпрометирован основной кошелёк.
+        Все три варианта <b>мгновенные</b>, со штрафом — но без ожиданий и таймлоков.
+      </p>
+      ${isLite ? `<div class="bg-bg-2 border border-warn/30 rounded-lg p-3 mt-3 text-xs text-warn">
+        ℹ На уровне <b>${LEVEL_NAMES[v.level]}</b> аварийный код совпадает с антифишинг-фразой —
+        вводите вашу антифишинг-фразу в поле ниже.
+      </div>` : ''}
+    </div>
+
+    <div class="space-y-4">
+
+      <!-- 1. На свой адрес -->
+      <div class="card">
+        <div class="card-h"><h2>Закрыть досрочно</h2><span class="badge badge-warn">штраф 5%</span></div>
+        <p class="text-text-2 text-xs mb-3">Сейф закроется, средства вернутся на ваш текущий кошелёк. Минимум 14 дней с момента депозита.</p>
+        ${codeField('ec_rec', recLabel, recTip)}
+        <button class="btn btn-warn w-full mt-3" id="ec_submit">Закрыть досрочно (−5%)</button>
+      </div>
+
+      <!-- 2. На резервный -->
+      <div class="card">
+        <div class="card-h"><h2>Восстановить в резерв</h2><span class="badge badge-warn">штраф 10%</span></div>
+        <p class="text-text-2 text-xs mb-3">Средства уйдут на резервный адрес, заданный при открытии: <b class="mono">${short(v.emergencyAddress,8,6)}</b>. Сейф закроется навсегда.</p>
+        ${codeField('rs_rec', recLabel, recTip)}
+        <button class="btn btn-warn w-full mt-3" id="rs_submit">Восстановить в резерв (−10%)</button>
+      </div>
+
+      <!-- 3. На любой адрес -->
+      <div class="card" style="border-color:#FF8C00">
+        <div class="card-h"><h2>🚨 Аварийный вывод на любой адрес</h2><span class="badge badge-warn">штраф 15%</span></div>
+        <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs text-warn">
+          ⚠ <b>Максимальный штраф.</b> Используйте, только если и основной, и резервный кошельки скомпрометированы.
+          Это последняя линия защиты — средства можно отправить на новый, безопасный адрес.
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label>Куда отправить<span class="req">*</span><span class="tip" data-tip="Адрес нового, безопасного кошелька. Не вашего скомпрометированного.">?</span></label>
+            <input id="ea_to" class="mono" placeholder="0x…">
+          </div>
+          ${codeField('ea_rec', recLabel, recTip)}
+          ${codeField('ea_anti','🛡 Антифишинг-фраза', isLite
+            ? `Введите её ещё раз — на ${LEVEL_NAMES[v.level]} аварийный код и антифишинг — одна и та же фраза.`
+            : 'Дополнительное подтверждение, отдельная от аварийного кода фраза.')}
+          <button class="btn btn-warn w-full" id="ea_submit">АВАРИЙНЫЙ ВЫВОД (−15%)</button>
+        </div>
+      </div>
+
+    </div>
+  `;
+  bindEyes(root);
+  $('#ec_submit').onclick = async ()=>{
+    const ok = await confirmModal('Закрыть сейф досрочно?','Средства вернутся вам со штрафом 5%. Сейф закроется.');
+    if(!ok) return;
+    const rc = await txCall('Досрочное закрытие', state.vault.earlyClose(state.activeVid, $('#ec_rec').value));
+    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+  };
+  $('#rs_submit').onclick = async ()=>{
+    const ok = await confirmModal('Восстановить в резерв?',`Средства уйдут на ${short(v.emergencyAddress,8,6)} со штрафом 10%. Сейф закроется навсегда.`);
+    if(!ok) return;
+    const rc = await txCall('Восстановление в резерв', state.vault.recoverToSafe(state.activeVid, $('#rs_rec').value));
+    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+  };
+  $('#ea_submit').onclick = async ()=>{
+    const to = $('#ea_to').value.trim();
+    if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
+    const ok = await confirmModal('Аварийный вывод?',`
+      <div>На: <span class="mono text-xs">${esc(to)}</span></div>
+      <div class="text-warn text-xs mt-2">⚠ Штраф 15%. Используйте только если другие адреса скомпрометированы.</div>`);
+    if(!ok) return;
+    const rc = await txCall('Аварийный вывод на любой адрес', state.vault.emergencyWithdrawToAny(state.activeVid, to, $('#ea_rec').value, $('#ea_anti').value));
+    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Настройки сейфа
+   ========================================================================== */
+async function renderSettings(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  if(!state.activeVid || state.activeVid===0n){
+    root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
+    return;
+  }
+  const v = await readVault(state.user, state.activeVid);
+  const maxTL = Number(await state.vault.getMaxTimelockForLevel(v.level).catch(()=>0n));
+
+  const isLite = v.level !== 2;
+  const recLabel = isLite ? '🛡 Антифишинг-фраза' : '🚨 Аварийный код';
+  const recTip = isLite
+    ? `На уровне ${LEVEL_NAMES[v.level]} аварийная роль совпадает с антифишинг-фразой.`
+    : 'Длина 10–64. Та самая аварийная фраза, заданная при открытии.';
+
+  root.innerHTML = `
+    <div class="space-y-4">
+
+      <!-- Смена кодов -->
+      <div class="card">
+        <div class="card-h"><h2>🔑 Сменить фразы</h2><span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span></div>
+        <p class="text-text-2 text-xs mb-3">
+          Для смены нужны <b>и основной, и аварийный</b> коды. После успеха старые фразы перестают работать.
+          Работает даже в режиме блокировки — это способ вернуть управление, если кто-то пытается подобрать коды.
+        </p>
+        ${codeField('rt_oc','🔑 Старый основной код','')}
+        ${codeField('rt_or', isLite ? '🛡 Старая антифишинг-фраза (= аварийный)' : '🚨 Старый аварийный код','')}
+        <div class="card-h mt-4"><h2 class="text-sm">Новые фразы</h2></div>
+        <div class="space-y-3">
+          ${codeField('rt_code','🔑 Новый основной код','Длина 10–64.')}
+          ${codeField('rt_anti','🛡 Новая антифишинг-фраза', isLite
+            ? 'Длина 10–64. На этом уровне она же работает как аварийный код.'
+            : 'Длина 10–64. Используется при подтверждении операций.')}
+          ${v.level === 2 ? codeField('rt_rec','🚨 Новый аварийный код','Длина 10–64. Отдельная фраза, только для аварийных операций.') : ''}
+        </div>
+        <button class="btn btn-gold btn-shimmer w-full mt-3" id="rt_submit">Сменить фразы</button>
+      </div>
+
+      <!-- Timelock -->
+      <div class="card">
+        <div class="card-h"><h2>⏱ Дополнительный timelock</h2><span class="badge badge-info">сейчас ${v.timelockHours}ч</span></div>
+        <p class="text-text-2 text-xs mb-3">
+          Дополнительная задержка операций сверх стандартных. Лимит для уровня <b>${LEVEL_NAMES[v.level]}</b>: <b>${maxTL}ч</b>.
+        </p>
+        <div>
+          <label>Часы (0 — отключить)<span class="tip" data-tip="Чем больше timelock, тем дольше любая операция будет требовать ожидания. Полезно как защита от похищенных кодов.">?</span></label>
+          <input id="st_h" type="number" min="0" max="${maxTL}" value="${v.timelockHours}">
+        </div>
+        ${codeField('st_code','🔑 Основной код','')}
+        <button class="btn btn-gold btn-shimmer w-full mt-3" id="st_submit">Сохранить</button>
+      </div>
+
+      <!-- Voluntary lock -->
+      <div class="card">
+        <div class="card-h"><h2>🔒 Добровольная заморозка</h2></div>
+        <div class="bg-bg-2 border border-warn/30 rounded-lg p-3 mb-3 text-xs text-warn">
+          ⚠ <b>Сейф будет полностью заблокирован</b> до указанной даты. Даже аварийный вывод не сработает. Только увеличение, максимум 5 лет.
+        </div>
+        <div>
+          <label>Дата разблокировки<span class="tip" data-tip="Только в будущем. После установки нельзя уменьшить.">?</span></label>
+          <input id="vl_date" type="datetime-local">
+          <div class="hint">${Number(v.voluntaryLockUntil)>0?`Сейчас до: ${fmtDate(v.voluntaryLockUntil)}`:'Не установлено'}</div>
+        </div>
+        ${codeField('vl_code','🔑 Основной код','')}
+        <button class="btn btn-warn w-full mt-3" id="vl_submit">Заморозить</button>
+      </div>
+
+      <!-- Change emergency address -->
+      <div class="card">
+        <div class="card-h"><h2>📮 Сменить резервный адрес</h2></div>
+        <p class="text-text-2 text-xs mb-3">Адрес для «Восстановить в резерв». Для смены нужна <b>${isLite ? 'антифишинг-фраза' : 'аварийная фраза'}</b>.</p>
+        <div>
+          <label>Новый адрес<span class="req">*</span></label>
+          <input id="ch_addr" class="mono" placeholder="0x…">
+          <div class="hint">Текущий: <span class="mono">${v.emergencyAddress}</span></div>
+        </div>
+        ${codeField('ch_rec', recLabel, recTip)}
+        <button class="btn btn-gold btn-shimmer w-full mt-3" id="ch_submit">Сменить адрес</button>
+      </div>
+
+    </div>
+  `;
+  bindEyes(root);
+
+  $('#rt_submit').onclick = async ()=>{
+    const oc = $('#rt_oc').value, or = $('#rt_or').value;
+    const newCode = $('#rt_code').value;
+    const newAnti = $('#rt_anti').value;
+    const newRec  = v.level === 2 ? ($('#rt_rec')?.value || '') : newAnti;
+    // Валидация длин
+    for(const f of [newCode, newAnti, ...(v.level===2?[newRec]:[])]){
+      const b = new TextEncoder().encode(f).length;
+      if(b<10) return toast('Каждая новая фраза должна быть не короче 10 символов','warning');
+      if(b>64) return toast('Каждая новая фраза не длиннее 64 символов','warning');
+    }
+    const ok = await confirmModal('Сменить фразы?','После этого старые фразы НЕ работают. Сохраните новые надёжно.');
+    if(!ok) return;
+    const nc = {newCode, newAntiPhrase:newAnti, newRecovery:newRec};
+    const rc = await txCall('Сменить фразы', state.vault.rotateCodes(state.activeVid, oc, or, nc));
+    if(rc){
+      const key = `apv43_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
+      localStorage.removeItem(key);
+      await checkAntiphish();
+      route('home');
+    }
+  };
+  $('#st_submit').onclick = async ()=>{
+    const h = Number($('#st_h').value);
+    if(h<0||h>maxTL) return toast(`Часы должны быть от 0 до ${maxTL}`,'warning');
+    const rc = await txCall('Установить timelock', state.vault.setTimelock(state.activeVid, BigInt(h), $('#st_code').value));
+    if(rc) route('settings');
+  };
+  $('#vl_submit').onclick = async ()=>{
+    const d = $('#vl_date').value;
+    if(!d) return toast('Выберите дату','warning');
+    const ts = Math.floor(new Date(d).getTime()/1000);
+    const now = Math.floor(Date.now()/1000);
+    if(ts<=now) return toast('Дата должна быть в будущем','warning');
+    if(ts > now + 5*365*86400) return toast('Максимум 5 лет','warning');
+    if(Number(v.voluntaryLockUntil) && ts<=Number(v.voluntaryLockUntil)) return toast('Можно только увеличивать','warning');
+    const ok = await confirmModal('Включить заморозку?','Сейф будет полностью заблокирован до указанной даты. Это нельзя отменить.');
+    if(!ok) return;
+    const rc = await txCall('Добровольная заморозка', state.vault.setVoluntaryLock(state.activeVid, BigInt(ts), $('#vl_code').value));
+    if(rc) route('settings');
+  };
+  $('#ch_submit').onclick = async ()=>{
+    const a = $('#ch_addr').value.trim();
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    if(a.toLowerCase()===state.user.toLowerCase()) return toast('Не должен совпадать с вашим','warning');
+    if(a.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Не должен быть контрактом','warning');
+    const rc = await txCall('Сменить резервный адрес', state.vault.changeEmergencyAddress(state.activeVid, a, $('#ch_rec').value));
+    if(rc) route('settings');
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: История транзакций
+   ========================================================================== */
+async function renderHistory(){
+  const root = $('#pageContent');
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h">
+        <h2>📜 История транзакций</h2>
+        <button class="btn btn-sm" id="hist_clear">Очистить</button>
+      </div>
+      <p class="text-text-2 text-xs mb-3">Сохраняется локально в браузере. При очистке cookies — пропадёт.</p>
+      <div id="hist_body" class="space-y-2"></div>
+    </div>
+  `;
+  function render(){
+    if(!state.txHistory.length){
+      $('#hist_body').innerHTML = `<div class="text-text-3 text-sm text-center py-6">История пуста. Сделайте транзакцию — она появится здесь.</div>`;
+      return;
+    }
+    $('#hist_body').innerHTML = state.txHistory.map(h=>{
+      const d = new Date(h.ts);
+      const ds = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const ico = h.status==='ok' ? '✅' : '✕';
+      const cls = h.status==='ok' ? 'text-success' : 'text-warn';
+      return `<div class="flex items-center gap-3 p-2 bg-bg-2 rounded border border-border text-sm">
+        <span class="text-text-3 mono text-xs">${ds}</span>
+        <span class="${cls}">${ico}</span>
+        <span class="flex-1 truncate">${esc(h.type)}</span>
+        <a href="${CONFIG.EXPLORER}/tx/${h.hash}" target="_blank" class="text-gold hover:underline mono text-xs">${short(h.hash,6,4)} ↗</a>
+      </div>`;
+    }).join('');
+  }
+  $('#hist_clear').onclick = ()=>{
+    if(!confirm('Очистить всю историю?')) return;
+    state.txHistory = [];
+    localStorage.removeItem('av_txhist');
+    render();
+    sessionLog('Локальная история транзакций очищена','info');
+  };
+  render();
+}
+
+/* ==========================================================================
+   Добавить ANCR в кошелёк через wallet_watchAsset
+   ========================================================================== */
+async function setContractAddress(){
+  const cur = CONFIG.CONTRACT_ADDRESS;
+  const a = await inputAddressModal(
+    'Адрес контракта V43',
+    'Введите адрес смарт-контракта AnchorVault V43 на Sepolia.<br><br>' +
+    '<span class="text-text-3 text-xs">Это НЕ адрес кошелька деплоера и НЕ адрес ANCR-токена — это адрес самого контракта V43.</span>',
+    cur === '0x0000000000000000000000000000000000000000' ? '' : cur
+  );
+  if(!a) return;
+  if(!ethers.isAddress(a)){
+    toast('Это не похоже на адрес. Должен начинаться с 0x и быть 42 символа.','error');
+    return;
+  }
+  // Проверим что это контракт
+  try{
+    const prov = state.provider || new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+    const code = await prov.getCode(a);
+    if(!code || code==='0x'){
+      const knownEOAs = {
+        '0x186c85f60633bb9db8df6360cfc129895b4468b1':'главный кошелёк-деплоер',
+        '0x528460ced8ec256ff2c9f8ac359f4fa0150996c8':'guardian',
+        '0xc946d1018c2d263c1c0a241c08d612827f6bd89f':'EOA',
+        '0x2ec26403084a4b3102059c70e349409288c1b1ee':'ANCR-токен (это токен, а не контракт V43!)',
+        '0xde2b90ea90698c7a3fae6ffaa40cd696cce9b567':'hot wallet'
+      };
+      const hint = knownEOAs[a.toLowerCase()];
+      let msg = `По адресу ${short(a,8,6)} нет байткода контракта — это пустой адрес или EOA-кошелёк.`;
+      if(hint) msg += `\n\nЭтот адрес похож на: ${hint}.\n\nАдрес контракта V43 должен быть ДРУГОЙ — он создаётся в момент деплоя контракта и обычно показывается в выводе deploy-скрипта или на Etherscan в разделе Contract Creation.`;
+      else msg += `\n\nАдрес контракта V43 создаётся в момент деплоя — посмотрите вывод deploy-скрипта или Etherscan.`;
+      msg += `\n\nВсё равно сохранить этот адрес?`;
+      const ok = confirm(msg);
+      if(!ok) return;
+    } else {
+      sessionLog(`Адрес ${short(a,8,6)} это контракт (${(code.length-2)/2} байт байткода)`,'success');
+    }
+  }catch(e){
+    sessionLog(`Проверка адреса упала: ${parseError(e)}. Сохраняю как есть.`,'warning');
+  }
+  CONFIG.CONTRACT_ADDRESS = a;
+  localStorage.setItem('av_v43_address', a);
+  $('#hContract').textContent = a;
+  $('#footEtherscan').href = `${CONFIG.EXPLORER}/address/${a}`;
+  toast('Адрес контракта сохранён','success');
+  sessionLog(`CONTRACT_ADDRESS установлен на ${a}`,'success');
+  if(state.signer){
+    state.vault = new ethers.Contract(a, VAULT_ABI, state.signer);
+    await verifyContract();
+    await loadConstants();
+    await refreshMetrics();
+  } else {
+    toast('Подключите кошелёк, чтобы пульт начал опрашивать контракт','info');
+  }
+}
+
+/* Модал ввода адреса с поддержкой вставки из буфера */
+function inputAddressModal(title, bodyHtml, initialValue=''){
+  return new Promise(resolve=>{
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = `
+      ${bodyHtml}
+      <div class="mt-3">
+        <input id="modalInput" class="mono" placeholder="0x…" value="${esc(initialValue)}" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="flex gap-2 mt-2">
+        <button class="btn btn-sm" id="modalPaste">Вставить из буфера</button>
+      </div>`;
+    $('#modal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    setTimeout(()=>$('#modalInput').focus(), 50);
+
+    $('#modalPaste').onclick = async ()=>{
+      try{
+        const text = await navigator.clipboard.readText();
+        $('#modalInput').value = text.trim();
+        sessionLog(`Вставлено из буфера: ${short(text.trim(),8,6)}`,'info');
+      }catch(e){
+        toast('Не удалось прочитать буфер — вставьте Ctrl+V','warning');
+      }
+    };
+
+    const close = (v)=>{
+      $('#modal').classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      $('#modalOk').onclick=null; $('#modalCancel').onclick=null;
+      resolve(v);
+    };
+    $('#modalOk').textContent = 'Сохранить';
+    $('#modalOk').onclick = ()=>close($('#modalInput').value.trim());
+    $('#modalCancel').onclick = ()=>close(null);
+    $('#modalInput').onkeydown = (e)=>{
+      if(e.key==='Enter') close($('#modalInput').value.trim());
+      if(e.key==='Escape') close(null);
+    };
+  });
+}
+
+async function addAncrToWallet(){
+  if(!window.ethereum){toast('Кошелёк не найден','error');return;}
+  try{
+    const ok = await window.ethereum.request({
+      method:'wallet_watchAsset',
+      params:{
+        type:'ERC20',
+        options:{
+          address: CONFIG.ANCR_ADDRESS,
+          symbol: 'ANCR',
+          decimals: 18,
+          image: ANCR_ICON_SVG
+        }
+      }
+    });
+    if(ok){
+      toast('ANCR добавлен в кошелёк ✓','success');
+      sessionLog('ANCR добавлен в кошелёк','success');
+    } else {
+      toast('Отменено','info');
+    }
+  }catch(e){toast(parseError(e),'error');}
+}
+
+/* ==========================================================================
+   Привязка UI и старт
+   ========================================================================== */
+function bindNav(){
+  $$('.nav-item').forEach(el=>{el.onclick = ()=>route(el.dataset.route);});
+  $('#btnConnect').onclick = ()=>state.user ? null : connectWallet();
+  $('#btnBurger').onclick = ()=>{$('#sidebar').classList.toggle('closed');$('#sbBackdrop').classList.toggle('hidden');};
+  $('#sbBackdrop').onclick = ()=>{$('#sidebar').classList.add('closed');$('#sbBackdrop').classList.add('hidden');};
+  $('#btnSwitchNet').onclick = switchToSepolia;
+  $('#btnCopyContract').onclick = ()=>{
+    if(CONFIG.CONTRACT_ADDRESS==='0x0000000000000000000000000000000000000000'){
+      toast('Адрес контракта V43 ещё не задан','warning');return;
+    }
+    navigator.clipboard.writeText(CONFIG.CONTRACT_ADDRESS);
+    toast('Адрес скопирован','info',2000);
+  };
+  $('#btnAddAncr').onclick = addAncrToWallet;
+  $('#btnSetContract').onclick = setContractAddress;
+  $('#hContract').textContent = CONFIG.CONTRACT_ADDRESS;
+  $('#langSelect').onchange = e=>{
+    state.lang = e.target.value;
+    applyLang();
+    renderSlog();
+  };
+  bindLogControls();
+}
+
+async function init(){
+  bindNav();
+  applyLang();
+  renderSlog();
+  sessionLog('Пульт V43 загружен','info');
+
+  // показать предупреждение если контракт ещё не подставлен
+  if(CONFIG.CONTRACT_ADDRESS==='0x0000000000000000000000000000000000000000'){
+    sessionLog('Адрес контракта V43 не задан. Нажмите ✏ в шапке, чтобы ввести адрес после деплоя.','warning');
+    toast('Адрес контракта V43 не задан. Нажмите ✏ в шапке и введите адрес V43 после деплоя.','warning',10000);
+  }
+
+  try{
+    state.provider = new ethers.JsonRpcProvider(CONFIG.RPC_URL);
+    await loadAncrMeta();
+  }catch(e){console.warn('RO provider',e);}
+
+  if(window.ethereum){
+    // accountsChanged: [] значит пользователь отключил сайт в MetaMask
+    window.ethereum.on('accountsChanged', (accs)=>{
+      if(!accs || accs.length===0){
+        sessionLog('MetaMask: сайт отключён пользователем','warning');
+        toast('Сайт отключён в кошельке. Нажмите «Подключить» для нового подключения.','warning');
+        disconnect();
+      } else {
+        sessionLog(`MetaMask: смена аккаунта на ${short(accs[0],6,4)} — перезагружаю`,'info');
+        location.reload();
+      }
+    });
+    window.ethereum.on('chainChanged', ()=>{
+      sessionLog('MetaMask: смена сети — перезагружаю','info');
+      location.reload();
+    });
+
+    await ensureNetwork();
+    // Авто-подключение только если уже есть разрешённые аккаунты
+    try{
+      const accs = await window.ethereum.request({method:'eth_accounts'});
+      if(accs && accs.length){
+        sessionLog(`Найден уже подключённый аккаунт ${short(accs[0],6,4)}, восстанавливаю сессию`,'info');
+        // Не используем connectWallet (он покажет окно выбора), а коннектимся тихо
+        await silentReconnect(accs[0]);
+      } else {
+        sessionLog('Кошелёк не подключён. Нажмите «Подключить кошелёк».','info');
+      }
+    }catch(e){
+      console.warn('eth_accounts probe failed',e);
+    }
+  } else {
+    sessionLog('Кошелёк (MetaMask) не обнаружен в браузере','warning');
+    toast('Не нашли MetaMask. Установите расширение и обновите страницу.','warning');
+  }
+
+  // обновление метрик и журнала
+  setInterval(()=>{if(state.user) refreshMetrics();}, 15000);
+
+  route('home');
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

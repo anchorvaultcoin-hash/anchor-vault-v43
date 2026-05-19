@@ -1,0 +1,15 @@
+{
+  "name": "AnchorVault V43",
+  "short_name": "AnchorVault",
+  "start_url": "/anchor-vault-v43/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#D4AF37",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzAiIGZpbGw9IiMwZjBmMGYiIHN0cm9rZT0iI0Q0QUYzNyIgc3Ryb2tlLXdpZHRoPSIyIi8+PGcgZmlsbD0iI0Q0QUYzNyI+PGNpcmNsZSBjeD0iMzIiIGN5PSIyMCIgcj0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDRBRjM3IiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIzMC41IiB5PSIyNCIgd2lkdGg9IjMiIGhlaWdodD0iMjIiIHJ4PSIxIi8+PHJlY3QgeD0iMjIiIHk9IjMwIiB3aWR0aD0iMjAiIGhlaWdodD0iMi41IiByeD0iMSIvPjxwYXRoIGQ9Ik0xNSA0NCBRMTUgNTQsIDMyIDU0IFE0OSA1NCwgNDkgNDQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0Q0QUYzNyIgc3Ryb2tlLXdpZHRoPSIzLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xNSA0NCBMMTEgNDEgTDE3IDQyIFoiLz48cGF0aCBkPSJNNDkgNDQgTDUzIDQxIEw0NyA0MiBaIi8+PC9nPjwvc3ZnPg==",
+      "sizes": "64x64",
+      "type": "image/svg+xml"
+    }
+  ]
+}
