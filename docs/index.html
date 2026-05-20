@@ -969,6 +969,23 @@ async function txCall(humanName, txPromise){
       }
     }catch{}
     console.error(humanName, e);
+    // Если ошибка похожа на неверный код — подтянем актуальный счётчик и сообщим
+    if(/WrongCode|неверный код|wrong code/i.test(m) && state.vault && state.user && state.activeVid){
+      try{
+        const sec = await state.vault.getVaultSecurity(state.user, state.activeVid);
+        const fc = Number(sec[0]);
+        const left = Math.max(0, 5 - fc);
+        if(fc >= 5){
+          sessionLog(`Сейф временно заблокирован (5 неудач подряд). Подождите окончания блокировки или смените фразы.`,'warning');
+          toast('Сейф заблокирован. Подождите окончания блокировки или смените фразы.','warning');
+        } else if(left === 1){
+          sessionLog(`⚠ Осталась 1 попытка перед блокировкой!`,'warning');
+          toast('⚠ Последняя попытка перед блокировкой!','warning');
+        } else {
+          sessionLog(`Счётчик неудач: ${fc}/5. Осталось ${left} попыток.`,'info');
+        }
+      }catch{}
+    }
     return null;
   }
 }
@@ -1378,6 +1395,53 @@ async function checkAntiphish(){
       $('#footAp').className = 'badge badge-success';
     }
   }catch(e){console.warn('antiphish',e);}
+}
+
+/* ==========================================================================
+   Универсальный баннер счётчика неудачных попыток.
+   Показывает текущий fail-counter сейфа и предупреждение по близости к блокировке.
+   Вставляется в начало каждой страницы, где пользователь вводит коды.
+   ========================================================================== */
+function failCountBanner(v){
+  if(!v) return '';
+  const fc = Number(v.failCount || 0);
+  // SOFT_LOCK_THRESHOLD в V43 = 5 неудач подряд → блок на 1/3/12ч (зависит от уровня)
+  const SOFT_LOCK = 5;
+  const lockedNow = v.lockedUntil && Number(v.lockedUntil) > Math.floor(Date.now()/1000);
+
+  if(fc === 0 && !lockedNow){
+    return `<div class="bg-bg-2 border rounded-lg p-2.5 mb-3 text-xs flex items-center gap-2" style="border-color:rgba(74,222,128,.3)">
+      <span class="text-success text-base leading-none">✓</span>
+      <span class="text-text-2">Неудачных попыток: <b class="text-success">0 / ${SOFT_LOCK}</b> · сейф в норме</span>
+    </div>`;
+  }
+  if(lockedNow){
+    return `<div class="bg-bg-2 border rounded-lg p-2.5 mb-3 text-xs flex items-start gap-2" style="border-color:rgba(255,140,0,.5)">
+      <span class="text-warn text-base leading-none mt-0.5">🔒</span>
+      <div class="flex-1">
+        <div class="text-warn font-semibold mb-0.5">Сейф временно заблокирован</div>
+        <div class="text-text-2">Разблокировка ${fmtDate(v.lockedUntil)}. После окончания счётчик сбросится. Если коды забыли — используйте «Сменить фразы» в Настройках (нужны старый основной и аварийный коды) или Аварийный вывод (нужен аварийный код).</div>
+      </div>
+    </div>`;
+  }
+  const left = Math.max(0, SOFT_LOCK - fc);
+  const danger = fc >= SOFT_LOCK - 1;
+  const colorHex = danger ? 'rgba(255,140,0,.5)' : 'rgba(93,163,213,.4)';
+  const color = danger ? 'text-warn' : 'text-info';
+  const ico = danger ? '⚠' : 'ℹ';
+  let msg;
+  if(left === 1){
+    msg = `<b>Последняя попытка перед блокировкой!</b> Введите код внимательно — после ещё одной ошибки сейф заблокируется на 1–12 ч (зависит от уровня).`;
+  } else {
+    msg = `Осталось <b>${left}</b> ${left===1?'попытка':left<5?'попытки':'попыток'} до временной блокировки.`;
+  }
+  return `<div class="bg-bg-2 border rounded-lg p-2.5 mb-3 text-xs flex items-start gap-2" style="border-color:${colorHex}">
+    <span class="${color} text-base leading-none mt-0.5">${ico}</span>
+    <div class="flex-1">
+      <div class="${color} font-semibold mb-0.5">Неудачных попыток: ${fc} / ${SOFT_LOCK}</div>
+      <div class="text-text-2">${msg}</div>
+    </div>
+  </div>`;
 }
 
 /* ==========================================================================
@@ -1909,6 +1973,7 @@ async function renderDeposit(){
   root.innerHTML = `
     <div class="card">
       <div class="card-h"><h2>📥 Пополнить сейф</h2><span class="badge badge-info">${LEVEL_NAMES[v.level]}</span></div>
+      ${failCountBanner(v)}
       <div class="space-y-3">
         <div class="stat">
           <div class="stat-label">Текущий баланс сейфа</div>
@@ -1950,6 +2015,7 @@ async function renderWithdraw(){
   root.innerHTML = `
     <div class="card">
       <div class="card-h"><h2>📤 Вывести из сейфа</h2><span class="badge badge-info">комиссия 0.5%</span></div>
+      ${failCountBanner(v)}
       <p class="text-text-2 text-sm mb-4">Операция мгновенная. Средства уйдут на указанный адрес сразу после подтверждения.</p>
       <div class="space-y-3">
         <div class="stat">
@@ -2180,6 +2246,7 @@ async function renderProtectedTransfer(host){
   const fraseCount = v.level === 2 ? 'три' : 'две';
 
   host.innerHTML = `
+    ${failCountBanner(v)}
     <div class="bg-bg-2 border rounded-lg p-3 mb-4 text-xs text-warn" style="border-color:rgba(212,175,55,.4)">
       🛡 <b>Перевод под защитой</b> — передача сейфа другому пользователю. Сейф с балансом <b class="text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</b> полностью перейдёт получателю. Комиссия 0.5%. Уровень <b>${LEVEL_NAMES[v.level]}</b> сохраняется.
     </div>
@@ -2257,6 +2324,7 @@ async function renderEmergency(){
   root.innerHTML = `
     <div class="card mb-4" style="border-color:#FF8C00">
       <div class="card-h"><h2>🚨 Аварийные операции</h2><span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span></div>
+      ${failCountBanner(v)}
       <p class="text-sm text-text-2">
         Используйте эти кнопки, только если потеряли основной код или скомпрометирован основной кошелёк.
         Все три варианта <b>мгновенные</b>, со штрафом — но без ожиданий и таймлоков.
@@ -2354,6 +2422,8 @@ async function renderSettings(){
 
   root.innerHTML = `
     <div class="space-y-4">
+
+      ${failCountBanner(v)}
 
       <!-- Смена кодов -->
       <div class="card">
