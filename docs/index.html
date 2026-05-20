@@ -1,9 +1,6 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>AnchorVault V43 — пульт управления</title>
@@ -572,7 +569,51 @@ const VAULT_ABI = [
   "event VaultTransferred(address indexed from, address indexed to, uint256 fromId, uint256 toId)",
   "event CodesRotated(address indexed user, uint256 vaultId)",
   "event WrongCodeAttempt(address indexed user, uint256 vaultId)",
-  "event WelcomeBonusPaid(address indexed user, uint256 amount)"
+  "event WelcomeBonusPaid(address indexed user, uint256 amount)",
+  // Custom errors V43 — нужны для расшифровки revert data
+  "error BadVaultId()",
+  "error NotActive()",
+  "error WeakCode()",
+  "error CodeTooLong()",
+  "error WrongCode()",
+  "error AntiPhishRequired()",
+  "error AntiPhishMismatch()",
+  "error ZeroAddress()",
+  "error InvalidAddress()",
+  "error Locked()",
+  "error Frozen()",
+  "error NotCreator()",
+  "error NotGuardian()",
+  "error ContractPaused()",
+  "error TokenNotSupported()",
+  "error DepositBelowMinimum()",
+  "error InvalidAmount()",
+  "error InvalidLevel()",
+  "error VaultLimitReached()",
+  "error TooManyAttempts()",
+  "error MustRotateCodesFirst()",
+  "error TimelockTooLong()",
+  "error LockTooLong()",
+  "error CooldownNotExpired()",
+  "error NotPendingRole()",
+  "error PauseTimeoutNotReached()",
+  "error NoPauseRequest()",
+  "error AdminRequestPending()",
+  "error TimelockNotExpired()",
+  "error NoAdminRequest()",
+  "error BonusExceedsLimit()",
+  "error AmountExceedsUint120()",
+  "error DirectTransferForbidden()",
+  // Возможные дополнительные
+  "error InsufficientBalance()",
+  "error InsufficientVaultBalance()",
+  "error EmergencyAddressMismatch()",
+  "error TokenTransferFailed()",
+  "error VoluntaryLockActive()",
+  "error WithdrawalsDisabled()",
+  "error MinHoldPeriodNotMet()",
+  "error SameAddress()",
+  "error RecoveryRequired()"
 ];
 
 const ERC20_ABI = [
@@ -621,25 +662,79 @@ const ERROR_MAP = {
   'BonusExceedsLimit':     'Бонус превышает максимум',
   'AmountExceedsUint120':  'Слишком большая сумма (выше лимита контракта)',
   'DirectTransferForbidden':'Прямые переводы запрещены — используйте «Открыть сейф»',
+  // Дополнительные
+  'AntiPhishMismatch':     'Антифишинг-фраза не совпадает. Проверьте, что вы ввели именно ту фразу, что задали при открытии сейфа.',
+  'InsufficientBalance':   'Недостаточно средств для операции',
+  'InsufficientVaultBalance':'В сейфе недостаточно средств после удержания комиссии',
+  'EmergencyAddressMismatch':'Адрес не совпадает с резервным',
+  'TokenTransferFailed':   'Не удалось перевести токен (вернуло false / нет approve)',
+  'VoluntaryLockActive':   'Сейф добровольно заморожен — операция недоступна до истечения',
+  'WithdrawalsDisabled':   'Вывод временно отключён',
+  'MinHoldPeriodNotMet':   'Должно пройти 14 дней с момента депозита',
+  'SameAddress':           'Адреса совпадают — нужны разные',
+  'RecoveryRequired':      'Нужна аварийная фраза',
   // ethers/MetaMask
   'user rejected':         'Вы отменили транзакцию в кошельке',
   'user denied':           'Вы отменили транзакцию в кошельке',
   'insufficient funds':    'Не хватает ETH на газ — пополните Sepolia ETH'
 };
 
+// Кэш для известных селекторов кастомных ошибок (4-byte) → имя
+const ERROR_SELECTORS = {};
+function buildSelectorCache(){
+  if(!state.vault) return;
+  if(Object.keys(ERROR_SELECTORS).length) return;
+  try{
+    state.vault.interface.fragments.forEach(f=>{
+      if(f.type==='error'){
+        // селектор = первые 4 байта keccak256 от сигнатуры
+        const sig = f.format('sighash');
+        const sel = ethers.id(sig).slice(0,10); // 0x + 8 hex
+        ERROR_SELECTORS[sel] = f.name;
+      }
+    });
+  }catch(e){console.warn('selector cache',e);}
+}
+
 function parseError(e){
   if(!e) return 'Неизвестная ошибка';
+  buildSelectorCache();
   let msg = e.reason || e.shortMessage || e.message || String(e);
+
+  // 1. Прямое имя ошибки из ethers v6
   const name = e.revert?.name || e.errorName;
   if(name && ERROR_MAP[name]) return ERROR_MAP[name];
-  const data = e?.data?.data || e?.error?.data || e?.info?.error?.data || e?.data;
-  if(typeof data==='string' && data.startsWith('0x') && state.vault){
-    try{
-      const p = state.vault.interface.parseError(data);
-      if(p && ERROR_MAP[p.name]) return ERROR_MAP[p.name];
-      if(p) return p.name;
-    }catch{}
+
+  // 2. Парсим сырые revert data
+  // ethers v6 хранит их в разных местах в зависимости от версии и провайдера
+  let data = e?.data?.data || e?.error?.data?.data || e?.error?.data
+          || e?.info?.error?.data || e?.data;
+  // иногда data — это объект {data:'0x...'}
+  if(data && typeof data === 'object' && data.data) data = data.data;
+
+  if(typeof data==='string' && data.startsWith('0x') && data.length>=10){
+    const selector = data.slice(0,10).toLowerCase();
+    // Сперва пробуем через ABI контракта
+    if(state.vault){
+      try{
+        const p = state.vault.interface.parseError(data);
+        if(p){
+          if(ERROR_MAP[p.name]) return ERROR_MAP[p.name];
+          return `Ошибка контракта: ${p.name}`;
+        }
+      }catch{}
+    }
+    // Затем — через локальный кэш селекторов
+    if(ERROR_SELECTORS[selector]){
+      const en = ERROR_SELECTORS[selector];
+      if(ERROR_MAP[en]) return ERROR_MAP[en];
+      return `Ошибка контракта: ${en}`;
+    }
+    // Не опознали — выводим селектор, чтобы можно было идентифицировать
+    return `Неизвестная ошибка контракта (селектор ${selector}). Журнал содержит подробности — пришлите его разработчику.`;
   }
+
+  // 3. Поиск по тексту message
   for(const [k,v] of Object.entries(ERROR_MAP)){
     if(msg.includes(k)) return v;
   }
@@ -864,6 +959,15 @@ async function txCall(humanName, txPromise){
     const m = parseError(e);
     toast(m, 'error');
     sessionLog(`Не удалось «${humanName}»: ${m}`, 'error');
+    // Дополнительно — пишем в журнал сырой селектор и данные, чтобы можно было опознать неизвестную ошибку
+    try{
+      let data = e?.data?.data || e?.error?.data?.data || e?.error?.data
+              || e?.info?.error?.data || e?.data;
+      if(data && typeof data==='object' && data.data) data = data.data;
+      if(typeof data==='string' && data.startsWith('0x') && data.length>=10){
+        sessionLog(`Селектор ошибки: ${data.slice(0,10)} (raw: ${data.length>74?data.slice(0,74)+'…':data})`, 'warning');
+      }
+    }catch{}
     console.error(humanName, e);
     return null;
   }
