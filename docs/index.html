@@ -113,17 +113,42 @@
 
   /* Инпуты */
   input,select,textarea{
-    width:100%;background:#0f0f0f;border:1px solid #2a2a2a;color:#e8e8e8;
-    border-radius:8px;padding:10px 12px;font-size:13px;outline:none;transition:.15s;
-    font-family:inherit
+    width:100%;
+    background:#262626;
+    border:1.5px solid #4a4a4a;
+    color:#ffffff;
+    border-radius:8px;padding:11px 13px;font-size:13.5px;outline:none;transition:all .15s;
+    font-family:inherit;
   }
-  input:focus,select:focus,textarea:focus{border-color:#D4AF37;box-shadow:0 0 0 3px rgba(212,175,55,.15)}
-  input::placeholder{color:#6a6a6a}
-  input:disabled,select:disabled{opacity:.6;cursor:not-allowed}
+  input:hover:not(:disabled):not(:focus),
+  select:hover:not(:disabled):not(:focus),
+  textarea:hover:not(:disabled):not(:focus){
+    border-color:#6a6a6a;background:#2a2a2a;
+  }
+  input:focus,select:focus,textarea:focus{
+    border-color:#D4AF37;
+    background:#1a1a1a;
+    box-shadow:0 0 0 3px rgba(212,175,55,.2);
+  }
+  input::placeholder,textarea::placeholder{color:#8a8a8a;font-weight:400}
+  input:disabled,select:disabled{opacity:.5;cursor:not-allowed;background:#161616}
+  /* Чекбоксы — золотой акцент */
+  input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;
+    width:18px;height:18px;min-width:18px;
+    background:#262626;border:2px solid #6a6a6a;border-radius:4px;
+    padding:0;cursor:pointer;position:relative;transition:.15s;
+  }
+  input[type=checkbox]:hover{border-color:#D4AF37}
+  input[type=checkbox]:checked{background:#D4AF37;border-color:#D4AF37}
+  input[type=checkbox]:checked::after{
+    content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);
+    color:#0f0f0f;font-weight:900;font-size:13px;line-height:1;
+  }
   label{display:flex;align-items:center;font-size:11px;font-weight:600;
-    text-transform:uppercase;letter-spacing:.04em;color:#a0a0a0;margin-bottom:6px}
+    text-transform:uppercase;letter-spacing:.04em;color:#cfcfcf;margin-bottom:7px}
   label .req{color:#FF8C00;margin-left:3px}
-  .hint{font-size:11px;color:#6a6a6a;margin-top:5px}
+  .hint{font-size:11.5px;color:#9a9a9a;margin-top:5px;line-height:1.4}
   .err-text{font-size:11px;color:#FF8C00;margin-top:5px}
 
   /* Кнопки */
@@ -1397,6 +1422,51 @@ async function checkAntiphish(){
   }catch(e){console.warn('antiphish',e);}
 }
 
+/* Универсальная карточка-памятка о сейфе: показывает кошелёк-владелец,
+   резервный адрес, баланс и уровень — для самопроверки перед операциями. */
+function vaultReminderCard(v){
+  if(!v) return '';
+  const ownerShort = short(state.user || '0x', 6, 4);
+  const emShort = short(v.emergencyAddress, 6, 4);
+  return `<div class="card mb-3" style="padding:12px 14px">
+    <div class="flex items-center justify-between mb-2">
+      <div class="text-[11px] text-text-3 uppercase tracking-wider font-bold">Памятка по сейфу</div>
+      <span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div>
+        <div class="text-text-3">Сейф №</div>
+        <div class="mono font-bold text-gold">#${v.id}</div>
+      </div>
+      <div>
+        <div class="text-text-3">Баланс</div>
+        <div class="mono font-bold text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</div>
+      </div>
+      <div>
+        <div class="text-text-3 flex items-center gap-1">Ваш кошелёк
+          <button onclick="navigator.clipboard.writeText('${state.user}');toast('Адрес скопирован','info',1500)" class="text-text-3 hover:text-gold" title="Скопировать">📋</button>
+        </div>
+        <div class="mono font-semibold">${ownerShort}</div>
+      </div>
+      <div>
+        <div class="text-text-3 flex items-center gap-1">Резервный
+          <button onclick="navigator.clipboard.writeText('${v.emergencyAddress}');toast('Резервный скопирован','info',1500)" class="text-text-3 hover:text-gold" title="Скопировать резервный">📋</button>
+          <a href="${CONFIG.EXPLORER}/address/${v.emergencyAddress}" target="_blank" class="text-text-3 hover:text-gold" title="Посмотреть на Etherscan">↗</a>
+        </div>
+        <div class="mono font-semibold text-warn">${emShort}</div>
+      </div>
+      <div class="col-span-2">
+        <div class="text-text-3">Открыт</div>
+        <div>${fmtDate(v.depositedAt)}</div>
+      </div>
+    </div>
+    <div class="mt-2 pt-2 border-t border-border text-[11px] text-text-3">
+      💡 Проверьте: ваш кошелёк в MetaMask сейчас = <b class="mono text-text">${ownerShort}</b>?
+      Если в кошельке другой адрес — переключите на правильный аккаунт, иначе операции не пройдут.
+    </div>
+  </div>`;
+}
+
 /* ==========================================================================
    Универсальный баннер счётчика неудачных попыток.
    Показывает текущий fail-counter сейфа и предупреждение по близости к блокировке.
@@ -1973,6 +2043,7 @@ async function renderDeposit(){
   root.innerHTML = `
     <div class="card">
       <div class="card-h"><h2>📥 Пополнить сейф</h2><span class="badge badge-info">${LEVEL_NAMES[v.level]}</span></div>
+      ${vaultReminderCard(v)}
       ${failCountBanner(v)}
       <div class="space-y-3">
         <div class="stat">
@@ -2015,6 +2086,7 @@ async function renderWithdraw(){
   root.innerHTML = `
     <div class="card">
       <div class="card-h"><h2>📤 Вывести из сейфа</h2><span class="badge badge-info">комиссия 0.5%</span></div>
+      ${vaultReminderCard(v)}
       ${failCountBanner(v)}
       <p class="text-text-2 text-sm mb-4">Операция мгновенная. Средства уйдут на указанный адрес сразу после подтверждения.</p>
       <div class="space-y-3">
@@ -2246,7 +2318,8 @@ async function renderProtectedTransfer(host){
   const fraseCount = v.level === 2 ? 'три' : 'две';
 
   host.innerHTML = `
-    ${failCountBanner(v)}
+    ${vaultReminderCard(v)}
+      ${failCountBanner(v)}
     <div class="bg-bg-2 border rounded-lg p-3 mb-4 text-xs text-warn" style="border-color:rgba(212,175,55,.4)">
       🛡 <b>Перевод под защитой</b> — передача сейфа другому пользователю. Сейф с балансом <b class="text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</b> полностью перейдёт получателю. Комиссия 0.5%. Уровень <b>${LEVEL_NAMES[v.level]}</b> сохраняется.
     </div>
@@ -2322,17 +2395,22 @@ async function renderEmergency(){
     : 'Длина 10–64. Та самая аварийная фраза, заданная при открытии сейфа.';
 
   root.innerHTML = `
+    ${vaultReminderCard(v)}
+    ${failCountBanner(v)}
+
     <div class="card mb-4" style="border-color:#FF8C00">
-      <div class="card-h"><h2>🚨 Аварийные операции</h2><span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span></div>
-      ${failCountBanner(v)}
-      <p class="text-sm text-text-2">
-        Используйте эти кнопки, только если потеряли основной код или скомпрометирован основной кошелёк.
+      <div class="card-h"><h2>🚨 Аварийные операции</h2></div>
+      <p class="text-sm text-text-2 mb-3">
+        Используйте, только если потеряли основной код или скомпрометирован основной кошелёк.
         Все три варианта <b>мгновенные</b>, со штрафом — но без ожиданий и таймлоков.
       </p>
-      ${isLite ? `<div class="bg-bg-2 border border-warn/30 rounded-lg p-3 mt-3 text-xs text-warn">
-        ℹ На уровне <b>${LEVEL_NAMES[v.level]}</b> аварийный код совпадает с антифишинг-фразой —
-        вводите вашу антифишинг-фразу в поле ниже.
-      </div>` : ''}
+      <div class="bg-bg-2 border rounded-lg p-3 text-xs text-warn" style="border-color:rgba(255,140,0,.4)">
+        ⚠ <b>Контракт V43 требует код для любого вывода</b>, в том числе на резервный адрес.
+        ${isLite
+          ? `На уровне <b>${LEVEL_NAMES[v.level]}</b> аварийный код = антифишинг-фраза, заданная при открытии сейфа.`
+          : `Аварийный код — третья отдельная фраза, заданная при открытии сейфа.`}
+        Если вы её совсем не помните — попробуйте ввести варианты, но осторожно: после 5 ошибок подряд сейф блокируется на 1–12 часов. В <b>V44</b> планируется кнопка «вернуть в резерв» без кодов — потребует подключить именно резервный кошелёк.
+      </div>
     </div>
 
     <div class="space-y-4">
@@ -2423,6 +2501,7 @@ async function renderSettings(){
   root.innerHTML = `
     <div class="space-y-4">
 
+      ${vaultReminderCard(v)}
       ${failCountBanner(v)}
 
       <!-- Смена кодов -->
