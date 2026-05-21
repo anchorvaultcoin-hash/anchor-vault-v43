@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>AnchorVault V43 — пульт управления</title>
+<title>AnchorVault V44 — пульт управления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -242,6 +242,29 @@
   .lvl-fortress.active .lvl-name,.lvl-fortress.active .lvl-desc{color:#0f0f0f}
   .lvl-fortress.active .lvl-tag{background:rgba(0,0,0,.2);color:#0f0f0f}
 
+  /* Антифишинг-индикатор в шапке */
+  .hAp-badge{
+    display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:10px;
+    font-size:9.5px;font-weight:700;letter-spacing:.04em;
+    background:rgba(74,222,128,.14);color:#4ade80;border:1px solid rgba(74,222,128,.35);
+    cursor:help;position:relative;text-transform:none;
+    animation:apGlow 2.6s ease-in-out infinite;
+  }
+  .hAp-badge.warn{background:rgba(255,140,0,.18);color:#FF8C00;border-color:rgba(255,140,0,.5);animation:apGlowWarn 1.1s ease-in-out infinite}
+  .hAp-badge.mute{background:#202020;color:#8a8a8a;border-color:#3a3a3a;animation:none}
+  @keyframes apGlow{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}50%{box-shadow:0 0 0 3px rgba(74,222,128,.2)}}
+  @keyframes apGlowWarn{0%,100%{box-shadow:0 0 0 0 rgba(255,140,0,0)}50%{box-shadow:0 0 0 4px rgba(255,140,0,.3)}}
+  .hAp-badge::after{
+    content:attr(data-full);position:absolute;top:calc(100% + 6px);right:0;
+    background:#1a1a1a;color:#e8e8e8;border:1px solid rgba(212,175,55,.4);
+    padding:10px 12px;border-radius:8px;
+    font-size:11px;font-weight:500;width:max-content;max-width:320px;
+    white-space:pre-line;text-align:left;pointer-events:none;opacity:0;
+    transition:opacity 150ms;box-shadow:0 12px 32px rgba(0,0,0,.7);z-index:200;line-height:1.5;
+    font-family:'JetBrains Mono',monospace;letter-spacing:0;text-transform:none;
+  }
+  .hAp-badge:hover::after,.hAp-badge:focus::after{opacity:1}
+
   /* Кнопка-аватар «Личный кабинет» */
   .profile-btn{
     display:flex;align-items:center;gap:8px;background:transparent;border:0;cursor:pointer;
@@ -308,44 +331,10 @@
   <!-- Sidebar -->
   <aside id="sidebar" class="closed md:!translate-x-0 fixed md:sticky top-0 md:top-0 z-40 h-vh w-64 bg-bg-2 border-r border-border flex flex-col">
     <div class="px-4 py-4 border-b border-border flex items-center gap-3">
-      <!-- Логотип: золотой якорь с замком на сейфе -->
-      <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg" aria-label="AnchorVault">
-        <defs>
-          <linearGradient id="safeBg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#2a2a2a"/>
-            <stop offset="100%" stop-color="#0f0f0f"/>
-          </linearGradient>
-          <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f0d77a"/>
-            <stop offset="50%" stop-color="#D4AF37"/>
-            <stop offset="100%" stop-color="#a07d1f"/>
-          </linearGradient>
-        </defs>
-        <!-- Сейф -->
-        <rect x="3" y="6" width="58" height="54" rx="9" fill="url(#safeBg)" stroke="#D4AF37" stroke-width="1.4"/>
-        <!-- Заклёпки -->
-        <circle cx="9" cy="12" r="1.2" fill="#D4AF37" opacity=".7"/>
-        <circle cx="55" cy="12" r="1.2" fill="#D4AF37" opacity=".7"/>
-        <circle cx="9" cy="54" r="1.2" fill="#D4AF37" opacity=".7"/>
-        <circle cx="55" cy="54" r="1.2" fill="#D4AF37" opacity=".7"/>
-        <!-- Замок-дужка над якорем -->
-        <path d="M 28 21 Q 28 15, 32 15 Q 36 15, 36 21" fill="none" stroke="url(#gold)" stroke-width="2" stroke-linecap="round"/>
-        <!-- Корпус замка -->
-        <rect x="26" y="20" width="12" height="9" rx="1.5" fill="url(#gold)"/>
-        <circle cx="32" cy="24" r="1.2" fill="#0f0f0f"/>
-        <!-- Якорь: стержень -->
-        <rect x="30.7" y="28" width="2.6" height="18" fill="url(#gold)"/>
-        <!-- Поперечина -->
-        <rect x="24" y="32" width="16" height="2.4" rx="1" fill="url(#gold)"/>
-        <!-- Дуга якоря -->
-        <path d="M 17 44 Q 17 53, 32 54 Q 47 53, 47 44" fill="none" stroke="url(#gold)" stroke-width="3.2" stroke-linecap="round"/>
-        <!-- Лапы -->
-        <path d="M 17 44 L 14 41 L 19 42 Z" fill="url(#gold)"/>
-        <path d="M 47 44 L 50 41 L 45 42 Z" fill="url(#gold)"/>
-      </svg>
+      <div id="sidebarLogo" class="shrink-0"></div>
       <div>
         <div class="font-bold text-sm tracking-wide">ANCHORVAULT</div>
-        <div class="text-[10px] text-gold mono font-semibold">V43 · Sepolia</div>
+        <div class="text-[10px] text-gold mono font-semibold">V44 · Sepolia</div>
       </div>
     </div>
     <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5" id="navMenu">
@@ -375,29 +364,39 @@
 
   <!-- Main -->
   <main class="min-h-vh flex flex-col">
-    <!-- Top bar: бургер, селектор языка, кнопки -->
-    <header class="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-border px-4 py-3 flex items-center gap-2 flex-wrap">
+    <!-- Top bar: бургер, контракт + антифишинг, действия -->
+    <header class="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-border px-3 md:px-4 py-2.5 flex items-center gap-2 flex-wrap">
       <button id="btnBurger" class="md:hidden btn btn-sm">☰</button>
-      <div class="flex-1 min-w-0">
-        <div class="text-[10px] text-text-3 uppercase tracking-wider">Контракт V43</div>
-        <div class="flex items-center gap-2 mono text-xs truncate">
-          <span id="hContract" class="truncate text-text">—</span>
-          <button id="btnCopyContract" class="btn btn-sm" title="Скопировать адрес">📋</button>
-          <button id="btnSetContract" class="btn btn-sm" title="Задать или сменить адрес контракта V43">✏</button>
+
+      <!-- Контракт + антифишинг-индикатор в одном блоке -->
+      <div class="flex-1 min-w-0 flex items-center gap-2">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <span class="text-text-3">Контракт V44</span>
+            <span id="hAntiphishBadge" class="hAp-badge hidden" title="">
+              <span id="hAntiphishIco">🛡</span>
+              <span id="hAntiphishHex" class="mono">—</span>
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5 mono text-[11px] md:text-xs min-w-0">
+            <span id="hContract" class="truncate text-text">—</span>
+            <button id="btnCopyContract" class="btn btn-sm !p-1 !px-1.5" title="Скопировать адрес">📋</button>
+            <button id="btnSetContract" class="btn btn-sm !p-1 !px-1.5 hidden sm:inline-flex" title="Сменить адрес">✏</button>
+          </div>
         </div>
       </div>
+
       <button id="btnAddAncr" class="btn btn-sm hidden sm:inline-flex" title="Добавить ANCR в кошелёк">+ ANCR</button>
-      <select id="langSelect" class="btn btn-sm !w-auto !py-1.5 cursor-pointer" title="Язык" style="min-width:54px">
+      <select id="langSelect" class="btn btn-sm !w-auto !py-1 cursor-pointer hidden md:inline-flex" title="Язык" style="min-width:54px">
         <option value="ru">RU</option>
         <option value="en">EN</option>
         <option value="zh">ZH</option>
       </select>
-      <!-- Аватарка-кружок «Личный кабинет» -->
       <button id="btnProfile" class="profile-btn" title="Личный кабинет" data-route="profile">
         <span id="profileAvatar" class="profile-avatar">👤</span>
-        <span class="profile-label hidden md:block">Кабинет</span>
+        <span class="profile-label hidden lg:block">Кабинет</span>
       </button>
-      <button id="btnConnect" class="btn btn-gold btn-shimmer">Подключить кошелёк</button>
+      <button id="btnConnect" class="btn btn-gold btn-shimmer btn-sm">Подключить</button>
     </header>
 
     <!-- Metric strip: 4 метрики -->
@@ -413,7 +412,7 @@
     <div id="pageContent" class="flex-1 p-4 md:p-6 max-w-3xl w-full mx-auto"></div>
 
     <footer class="border-t border-border px-4 py-3 text-[11px] text-text-3 flex items-center justify-between flex-wrap gap-2">
-      <span>AnchorVault · V43 testnet · все суммы фейковые</span>
+      <span>AnchorVault · V44 testnet · все суммы фейковые</span>
       <span id="footApFull" class="mono"></span>
     </footer>
   </main>
@@ -480,6 +479,51 @@
   </div>
 </div>
 
+<!-- Onboarding резервного адреса (раз и навсегда) -->
+<div id="geModal" class="hidden fixed inset-0 z-[148] bg-black/85 backdrop-blur-sm flex items-center justify-center px-4 overflow-y-auto py-6">
+  <div class="card max-w-lg w-full my-auto" style="border-color:#FF8C00;border-width:2px">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="text-3xl">🚨</div>
+      <div class="text-lg font-bold text-warn">Сначала задайте резервный адрес</div>
+    </div>
+    <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs">
+      <p class="text-warn font-semibold mb-2">⚠ Это адрес куда уйдут средства если вы потеряете доступ.</p>
+      <p class="text-text-2 mb-2">Если вы забудете коды или ваш основной кошелёк украдут — кнопка <b>«ПАНИКА»</b> вернёт средства на этот резервный адрес.</p>
+      <p class="text-text-2 mb-2"><b class="text-warn">Адрес ставится РАЗ И НАВСЕГДА.</b> Поменять его потом нельзя — это специально, чтобы атакующий не смог подменить его, получив доступ к вашему основному кошельку.</p>
+      <p class="text-text-2"><b>Используйте отдельный безопасный кошелёк</b> — желательно с приватником записанным на бумагу и спрятанным надёжно. Не используйте тот же кошелёк что подключён сейчас!</p>
+    </div>
+
+    <div class="mb-3">
+      <label>Адрес резервного кошелька<span class="req">*</span></label>
+      <div class="flex gap-2 items-stretch">
+        <input id="geAddr" class="mono flex-1" placeholder="0x…" spellcheck="false" autocomplete="off">
+        <button id="gePaste" class="btn btn-sm">📋 Вставить</button>
+      </div>
+      <div class="hint">Должен отличаться от вашего основного кошелька</div>
+    </div>
+
+    <div class="space-y-2 mb-4 text-xs">
+      <label class="flex items-start gap-2 cursor-pointer" style="text-transform:none;letter-spacing:0;font-size:12px;color:#e8e8e8;font-weight:400;line-height:1.4">
+        <input type="checkbox" id="geCheck1" class="mt-0.5">
+        <span>Я понимаю, что этот адрес <b>невозможно поменять</b> после установки</span>
+      </label>
+      <label class="flex items-start gap-2 cursor-pointer" style="text-transform:none;letter-spacing:0;font-size:12px;color:#e8e8e8;font-weight:400;line-height:1.4">
+        <input type="checkbox" id="geCheck2" class="mt-0.5">
+        <span>Этот адрес <b>не совпадает</b> с моим основным кошельком, у меня есть к нему полный доступ</span>
+      </label>
+      <label class="flex items-start gap-2 cursor-pointer" style="text-transform:none;letter-spacing:0;font-size:12px;color:#e8e8e8;font-weight:400;line-height:1.4">
+        <input type="checkbox" id="geCheck3" class="mt-0.5">
+        <span>Я сохранил seed-фразу (или приватный ключ) от резервного кошелька в надёжном месте</span>
+      </label>
+    </div>
+
+    <div class="flex flex-wrap justify-end gap-2">
+      <button id="geCancel" class="btn">Позже</button>
+      <button id="geSubmit" class="btn btn-warn" disabled>Установить навсегда</button>
+    </div>
+  </div>
+</div>
+
 <!-- Антифишинг WARNING полноэкранный -->
 <div id="apBad" class="hidden ap-bad">
   <div class="ap-bad-inner">
@@ -510,13 +554,28 @@
    КОНФИГ
    ========================================================================== */
 const CONFIG = {
-  // Адрес контракта V43 на Sepolia.
-  // По умолчанию подставлен адрес, который указал пользователь.
-  // Меняется кнопкой ✏ в шапке и сохраняется в localStorage.
+  // V44 контракт на Sepolia (новый деплой с правильным ANCR)
   CONTRACT_ADDRESS: (function(){
-    const saved = localStorage.getItem('av_v43_address');
-    if(saved && saved!=='0x0000000000000000000000000000000000000000' && /^0x[0-9a-fA-F]{40}$/.test(saved)) return saved;
-    return '0xC946d1018C2D263C1C0a241c08D612827F6bD89f';
+    // Список «не-V44» адресов которые нужно игнорировать в localStorage —
+    // если пользователь раньше ввёл V43 или EOA, мы их выкидываем и подставляем V44 default
+    const BLACKLIST = [
+      '0x0000000000000000000000000000000000000000',
+      '0xc946d1018c2d263c1c0a241c08d612827f6bd89f', // V43 legacy
+      '0x186c85f60633bb9db8df6360cfc129895b4468b1', // deployer EOA
+      '0x2ec26403084a4b3102059c70e349409288c1b1ee', // старый ANCR
+      '0x54a433205f2f0966bae8ddfc4e6d624e72a2a00c', // битый V44
+      '0x5dd724204b36e95fd7e5578504e145fb876716b1', // фейковый ANCR
+    ];
+    const saved = (localStorage.getItem('av_v44_address') || '').toLowerCase();
+    if(saved && /^0x[0-9a-f]{40}$/.test(saved) && !BLACKLIST.includes(saved)){
+      return localStorage.getItem('av_v44_address');  // вернуть оригинальный регистр
+    }
+    // Если в localStorage был legacy/мусор — очистим и подставим V44 default
+    if(saved && BLACKLIST.includes(saved)){
+      localStorage.removeItem('av_v44_address');
+      console.warn('[AnchorVault] Удалён неактуальный адрес из localStorage:', saved);
+    }
+    return '0x01A8144d5EBf7A298Fd34Fa2f96ff0742d3170F3';
   })(),
   ANCR_ADDRESS:     '0xbd72aAb70c67cdFc3683747158177F962997fbC1',
   GUARDIAN_ADDRESS: '0x13ACB3b72c62A969753Ca4Ea04666B0e43c96dDa',
@@ -527,75 +586,155 @@ const CONFIG = {
   EXPLORER:         'https://sepolia.etherscan.io',
 };
 
-/* SVG-иконка ANCR для wallet_watchAsset (золотой якорь) */
-const ANCR_ICON_SVG = `data:image/svg+xml;base64,${btoa(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<circle cx="32" cy="32" r="30" fill="#0f0f0f" stroke="#D4AF37" stroke-width="2"/>
-<g fill="#D4AF37">
-<circle cx="32" cy="20" r="4" fill="none" stroke="#D4AF37" stroke-width="2"/>
-<rect x="30.5" y="24" width="3" height="22" rx="1"/>
-<rect x="22" y="30" width="20" height="2.5" rx="1"/>
-<path d="M15 44 Q15 54, 32 54 Q49 54, 49 44" fill="none" stroke="#D4AF37" stroke-width="3.5" stroke-linecap="round"/>
-<path d="M15 44 L11 41 L17 42 Z"/>
-<path d="M49 44 L53 41 L47 42 Z"/>
-</g>
-</svg>`.trim())}`;
+/* Универсальный SVG-логотип AnchorVault: золотая монета с лучами и якорем
+   Используется в шапке, на главной приветственной карточке, и как иконка ANCR в MetaMask. */
+function anchorLogoSvg(size = 48){
+  const s = Number(size);
+  return `<svg viewBox="0 0 200 200" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg" aria-label="AnchorVault">
+    <defs>
+      <radialGradient id="alvRim${s}" cx="50%" cy="50%" r="50%">
+        <stop offset="78%" stop-color="#f5d063"/>
+        <stop offset="92%" stop-color="#D4AF37"/>
+        <stop offset="100%" stop-color="#a07d1f"/>
+      </radialGradient>
+      <linearGradient id="alvGold${s}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#f5d063"/>
+        <stop offset="55%" stop-color="#D4AF37"/>
+        <stop offset="100%" stop-color="#a07d1f"/>
+      </linearGradient>
+      <radialGradient id="alvCenter${s}" cx="50%" cy="42%" r="58%">
+        <stop offset="0%" stop-color="#1c2845"/>
+        <stop offset="100%" stop-color="#0a1224"/>
+      </radialGradient>
+    </defs>
+    <!-- Внешнее кольцо монеты с золотым градиентом -->
+    <circle cx="100" cy="100" r="96" fill="url(#alvRim${s})"/>
+    <!-- Лучи (ребристый ободок) -->
+    <g stroke="#a07d1f" stroke-width="0.6" opacity=".5">
+      ${Array.from({length:60}).map((_,i)=>{
+        const a=(i*6)*Math.PI/180;
+        const x1=100+Math.cos(a)*76, y1=100+Math.sin(a)*76;
+        const x2=100+Math.cos(a)*92, y2=100+Math.sin(a)*92;
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/>`;
+      }).join('')}
+    </g>
+    <!-- Внутренний золотой бордюр -->
+    <circle cx="100" cy="100" r="75" fill="none" stroke="url(#alvGold${s})" stroke-width="3"/>
+    <!-- Тёмно-синий центр -->
+    <circle cx="100" cy="100" r="72" fill="url(#alvCenter${s})"/>
+    <!-- Якорь -->
+    <g fill="url(#alvGold${s})" stroke="#7a5e15" stroke-width="0.6" stroke-linejoin="round">
+      <!-- Кольцо сверху -->
+      <circle cx="100" cy="50" r="7" fill="none" stroke="url(#alvGold${s})" stroke-width="5"/>
+      <!-- Поперечина -->
+      <rect x="73" y="74" width="54" height="9" rx="3.5"/>
+      <!-- Заглушки поперечины -->
+      <circle cx="73" cy="78.5" r="5.5"/>
+      <circle cx="127" cy="78.5" r="5.5"/>
+      <!-- Стержень -->
+      <rect x="96" y="60" width="8" height="80" rx="2"/>
+      <!-- Замок на стержне -->
+      <rect x="91" y="92" width="18" height="14" rx="3"/>
+      <path d="M 94 92 Q 94 85, 100 85 Q 106 85, 106 92" fill="none" stroke="url(#alvGold${s})" stroke-width="3"/>
+      <circle cx="100" cy="99" r="1.8" fill="#7a5e15"/>
+      <!-- Дуга нижняя -->
+      <path d="M 56 130 Q 56 158, 100 162 Q 144 158, 144 130" fill="none" stroke="url(#alvGold${s})" stroke-width="9" stroke-linecap="round"/>
+      <!-- Левая лапа -->
+      <path d="M 56 130 L 48 122 L 64 126 Z"/>
+      <!-- Правая лапа -->
+      <path d="M 144 130 L 152 122 L 136 126 Z"/>
+      <!-- Блик на стержне -->
+      <rect x="96.5" y="64" width="2.5" height="68" fill="#fbe79d" opacity=".55"/>
+    </g>
+  </svg>`;
+}
+
+/* SVG-иконка ANCR для wallet_watchAsset (тот же логотип, но в base64) */
+const ANCR_ICON_SVG = `data:image/svg+xml;base64,${btoa(anchorLogoSvg(128).replace(/\s+/g,' '))}`;
 
 /* ==========================================================================
-   ABI V43 (по таблице ТЗ — 3 кода, все операции мгновенные)
+   ABI V44 — мультитокен, globalEmergency, panicWithdraw, secureTransfer
    ========================================================================== */
 const VAULT_ABI = [
-  // Константы
+  // Constants (только нужные на UI)
   "function VERSION() view returns (uint256)",
   "function MIN_DEPOSIT() view returns (uint256)",
   "function MIN_CODE_LENGTH() view returns (uint256)",
   "function MAX_CODE_LENGTH() view returns (uint256)",
-  "function MIN_HOLD_PERIOD() view returns (uint256)",
   "function MAX_WELCOME_BONUS() view returns (uint256)",
-  // Роли
+  "function SOFT_LOCK_THRESHOLD() view returns (uint256)",
+  "function HARD_LOCK_THRESHOLD() view returns (uint256)",
+  "function MAX_TOTAL_ATTEMPTS() view returns (uint256)",
+  "function PANIC_FEE_BPS() view returns (uint256)",
+  "function EARLY_CLOSE_FEE_BPS() view returns (uint256)",
+  "function RECOVER_TO_SAFE_FEE_BPS() view returns (uint256)",
+  "function EMERGENCY_ANY_FEE_BPS() view returns (uint256)",
+  "function WITHDRAW_FEE_BPS() view returns (uint256)",
+  "function TRANSFER_FEE_BPS() view returns (uint256)",
+  "function SECURE_TRANSFER_FEE_BPS() view returns (uint256)",
+  "function SECURE_TRANSFER_TIMEOUT() view returns (uint256)",
+  "function SECURE_TRANSFER_MAX_ATTEMPTS() view returns (uint256)",
+  "function SAFE_MAX_TIMELOCK_HOURS() view returns (uint256)",
+  "function VAULT_MAX_TIMELOCK_HOURS() view returns (uint256)",
+  "function FORTRESS_MAX_TIMELOCK_HOURS() view returns (uint256)",
+  // Roles
   "function creator() view returns (address)",
   "function guardian() view returns (address)",
   "function paused() view returns (bool)",
-  // Токены
+  // Tokens
   "function ANCR_TOKEN() view returns (address)",
   "function supportedTokens(address) view returns (bool)",
   "function addSupportedToken(address)",
   "function removeSupportedToken(address)",
-  // Состояние юзера
-  "function activeVaultId(address) view returns (uint256)",
+  // Global emergency (новое V44)
+  "function globalEmergency(address) view returns (address)",
+  "function getGlobalEmergency(address user) view returns (address)",
+  "function setGlobalEmergency(address emergency)",
+  // User state
+  "function activeVaultIdByToken(address, address) view returns (uint256)",  // ✨ мультитокен
   "function userVaultCount(address) view returns (uint256)",
   "function welcomeBonusClaimed(address) view returns (bool)",
   "function totalFailedAttempts(address) view returns (uint256)",
   "function frozenUntil(address) view returns (uint256)",
-  // Финансы
+  "function lastGlobalAttempt(address) view returns (uint256)",
+  // Financials
   "function lockedPrincipal(address) view returns (uint256)",
   "function creatorFees(address) view returns (uint256)",
   "function strategicReserve(address) view returns (uint256)",
   "function rewardPool(address) view returns (uint256)",
   "function totalBurnedANCR() view returns (uint256)",
   "function welcomeBonus() view returns (uint256)",
-  // Геттеры
+  // View геттеры
   "function getVaultCore(address user, uint256 vid) view returns (uint64 id, address token, uint120 amount, string name, uint8 status, uint8 level, address emergencyAddress)",
   "function getVaultTimings(address user, uint256 vid) view returns (uint48 lockedAt, uint48 depositedAt, uint48 lockedUntil, uint48 voluntaryLockUntil, uint16 timelockHours)",
   "function getVaultSecurity(address user, uint256 vid) view returns (uint16 failCount, bool requiresCodeRotation)",
   "function getAntiPhishHash(address user, uint256 vid) view returns (bytes32)",
   "function getMaxTimelockForLevel(uint8) pure returns (uint256)",
   "function getDepositFeeForLevel(uint8) pure returns (uint256)",
-  // V43: операции с 3 кодами, мгновенные
-  "function openVault(address token, tuple(string name, string code, string antiPhrase, string recovery, uint256 amount, address emergencyAddress) p, uint8 level_) returns (uint256)",
+  // ✨ V44 openVault — без emergencyAddress, он из globalEmergency
+  "function openVault(address token, tuple(string name, string code, string antiPhrase, string recovery, uint256 amount) p, uint8 level_) returns (uint256)",
   "function depositToVault(uint256 vid, uint256 amount, string code)",
   "function withdrawFromVault(uint256 vid, uint256 amount, address to, string code, string antiPhrase)",
-  "function transferVault(uint256 vid, address to, string code, string antiPhrase, tuple(string newCode, string newAntiPhrase, string newRecovery) nc)",
   "function earlyClose(uint256 vid, string recovery)",
   "function recoverToSafe(uint256 vid, string recovery)",
   "function emergencyWithdrawToAny(uint256 vid, address to, string recovery, string antiPhrase)",
+  "function panicWithdraw(uint256 vid)",  // ✨ новое V44 — без кодов
   "function rotateCodes(uint256 vid, string oldCode, string oldRecovery, tuple(string newCode, string newAntiPhrase, string newRecovery) nc)",
   "function setTimelock(uint256 vid, uint256 hoursVal, string code)",
   "function setVoluntaryLock(uint256 vid, uint256 lockUntilTimestamp, string code)",
-  "function changeEmergencyAddress(uint256 vid, address newAddress, string recovery)",
   "function donateToRewardPool(address token, uint256 amount)",
   "function resetFailedAttempts()",
-  // Админ
+  // Legacy transferVault (мгновенная передача) — ещё работает в V44
+  "function transferVault(uint256 vid, address to, string code, string antiPhrase, tuple(string newCode, string newAntiPhrase, string newRecovery) nc)",
+  // ✨ Secure Transfer V44 — двухшаговая через 48 часов
+  "function initSecureTransfer(uint256 vid, address to, string code, string antiPhrase, string confirmCode, string newCode, string newAntiPhrase, string newRecovery) returns (uint256 transferId)",
+  "function confirmSecureTransfer(uint256 transferId, string confirmCode)",
+  "function cancelSecureTransfer(uint256 transferId)",
+  "function reclaimExpiredTransfer(uint256 transferId)",
+  "function getSecureTransfer(uint256 transferId) view returns (address from, address to, uint256 vaultId, uint48 expiresAt, uint16 failCount, uint8 status)",
+  "function pendingIncomingTransfer(address, address) view returns (uint256)",
+  "function nextSecureTransferId() view returns (uint256)",
+  // Admin
   "function setWelcomeBonus(uint256 amount)",
   "function transferCreatorship(address newCreator)",
   "function acceptCreatorship()",
@@ -612,61 +751,28 @@ const VAULT_ABI = [
   "function requestReserveWithdraw(address token, address to, uint256 amount)",
   "function cancelReserveWithdraw(address token)",
   "function withdrawStrategicReserve(address token)",
-  // События
+  // Events
   "event VaultCreated(address indexed user, uint256 vaultId, address indexed token, uint256 amount, string name, address emergencyAddress, uint8 level)",
   "event VaultDeposited(address indexed user, uint256 vaultId, address indexed token, uint256 net, uint256 newTotal)",
-  "event VaultWithdrawn(address indexed user, uint256 vaultId, address indexed token, address to, uint256 amount)",
+  "event VaultWithdrawn(address indexed user, uint256 vaultId, address indexed token, uint256 amount)",
   "event VaultEarlyClosed(address indexed user, uint256 vaultId, uint256 payout, uint256 penalty)",
   "event VaultRecovered(address indexed user, uint256 vaultId, address indexed to, uint256 payout, uint256 penalty)",
-  "event EmergencyWithdrawToAny(address indexed user, uint256 vaultId, address indexed to, uint256 payout, uint256 fee)",
+  "event EmergencyWithdrawToAny(address indexed user, uint256 vaultId, address indexed to, uint256 amount, uint256 fee)",
+  "event PanicWithdraw(address indexed user, uint256 indexed vid, address indexed to, uint256 payout, uint256 penalty)",
   "event VaultTransferred(address indexed from, address indexed to, uint256 fromId, uint256 toId)",
   "event CodesRotated(address indexed user, uint256 vaultId)",
   "event WrongCodeAttempt(address indexed user, uint256 vaultId)",
   "event WelcomeBonusPaid(address indexed user, uint256 amount)",
-  // Custom errors V43 — нужны для расшифровки revert data
-  "error BadVaultId()",
-  "error NotActive()",
-  "error WeakCode()",
-  "error CodeTooLong()",
-  "error WrongCode()",
-  "error AntiPhishRequired()",
-  "error AntiPhishMismatch()",
-  "error ZeroAddress()",
-  "error InvalidAddress()",
-  "error Locked()",
-  "error Frozen()",
-  "error NotCreator()",
-  "error NotGuardian()",
-  "error ContractPaused()",
-  "error TokenNotSupported()",
-  "error DepositBelowMinimum()",
-  "error InvalidAmount()",
-  "error InvalidLevel()",
-  "error VaultLimitReached()",
-  "error TooManyAttempts()",
-  "error MustRotateCodesFirst()",
-  "error TimelockTooLong()",
-  "error LockTooLong()",
-  "error CooldownNotExpired()",
-  "error NotPendingRole()",
-  "error PauseTimeoutNotReached()",
-  "error NoPauseRequest()",
-  "error AdminRequestPending()",
-  "error TimelockNotExpired()",
-  "error NoAdminRequest()",
-  "error BonusExceedsLimit()",
-  "error AmountExceedsUint120()",
-  "error DirectTransferForbidden()",
-  // Возможные дополнительные
-  "error InsufficientBalance()",
-  "error InsufficientVaultBalance()",
-  "error EmergencyAddressMismatch()",
-  "error TokenTransferFailed()",
-  "error VoluntaryLockActive()",
-  "error WithdrawalsDisabled()",
-  "error MinHoldPeriodNotMet()",
-  "error SameAddress()",
-  "error RecoveryRequired()"
+  "event GlobalEmergencySet(address indexed user, address indexed emergency)",
+  "event SecureTransferInitiated(uint256 indexed transferId, address indexed from, address indexed to, uint256 vaultId, uint48 expiresAt)",
+  "event SecureTransferConfirmed(uint256 indexed transferId, address indexed from, address indexed to)",
+  "event SecureTransferCancelled(uint256 indexed transferId)",
+  "event SecureTransferExpired(uint256 indexed transferId)",
+  "event SecureTransferAttemptFailed(uint256 indexed transferId, uint16 failCount)",
+  "event FailedAttempt(address indexed user, uint256 vaultId, uint16 failCount, uint256 lockedUntil)",
+  "event FailedAttemptsReset(address indexed user)",
+  "event TimelockSet(address indexed user, uint256 vaultId, uint256 hoursVal)",
+  "event VoluntaryLockSet(address indexed user, uint256 vaultId, uint256 lockedUntil)"
 ];
 
 const ERC20_ABI = [
@@ -805,7 +911,7 @@ const state = {
   consts:{},
   ancr:{ address: CONFIG.ANCR_ADDRESS, symbol:'ANCR', decimals:18 },
   knownTokens:[],
-  tosAccepted: localStorage.getItem('av_tos43')==='1',
+  tosAccepted: localStorage.getItem('av_tos44')==='1',
   lang: localStorage.getItem('av_lang') || 'ru',
   txHistory: JSON.parse(localStorage.getItem('av_txhist')||'[]')
 };
@@ -1151,7 +1257,7 @@ async function connectWallet(){
     await checkRoles();
     await loadAncrMeta();
     try{
-      state.activeVid = await state.vault.activeVaultId(state.user);
+      state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);
       sessionLog(`activeVaultId = ${state.activeVid.toString()}`,'info');
     }catch(e){
       state.activeVid = 0n;
@@ -1171,6 +1277,11 @@ async function connectWallet(){
     toast(`Подключен ${short(state.user,6,4)}`,'success');
     sessionLog(`Готово, кошелёк подключён`,'success');
     route(state.route);
+
+    // V44: проверяем резервный адрес (если ToS уже принят)
+    if(state.tosAccepted){
+      await checkAndPromptGlobalEmergency();
+    }
   }catch(e){
     toast(parseError(e),'error');
     sessionLog(`Подключение упало: ${parseError(e)}`,'error');
@@ -1263,7 +1374,7 @@ async function silentReconnect(addr){
     await checkRoles();
     await loadAncrMeta();
     try{
-      state.activeVid = await state.vault.activeVaultId(state.user);
+      state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);
       sessionLog(`activeVaultId = ${state.activeVid.toString()}`,'info');
     }catch(e){
       state.activeVid = 0n;
@@ -1281,6 +1392,9 @@ async function silentReconnect(addr){
     await refreshMetrics();
     sessionLog(`Сессия восстановлена для ${short(state.user,6,4)}`,'success');
     route('home');
+    if(state.tosAccepted){
+      await checkAndPromptGlobalEmergency();
+    }
   }catch(e){
     sessionLog(`Авто-подключение упало: ${parseError(e)}. Попробуйте кнопку «Подключить кошелёк».`,'warning');
     console.error('silentReconnect failed',e);
@@ -1367,11 +1481,11 @@ async function refreshMetrics(){
       errors.push(`баланс ETH: ${parseError(e)}`);
     }
 
-    // 3. На якоре + 4. В сейфе всего — оба зависят от activeVaultId(state.user)
+    // 3. На якоре + 4. В сейфе всего — оба зависят от activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS)
     let activeVid = state.activeVid;
     if(!activeVid || activeVid===0n){
       try{
-        activeVid = await state.vault.activeVaultId(state.user);
+        activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);
         state.activeVid = activeVid;
       }catch(e){
         errors.push(`activeVaultId не сработал: ${parseError(e)}. Возможно неверный адрес контракта или ABI.`);
@@ -1406,22 +1520,41 @@ async function refreshMetrics(){
    Антифишинг
    ========================================================================== */
 async function checkAntiphish(){
+  // Локальный helper для обновления шапочного бейджа
+  const updHeader = (state, ico, hex, tooltip)=>{
+    const b = $('#hAntiphishBadge');
+    if(!b) return;
+    b.className = 'hAp-badge ' + state; // '', 'warn', 'mute'
+    b.classList.remove('hidden');
+    $('#hAntiphishIco').textContent = ico;
+    $('#hAntiphishHex').textContent = hex;
+    b.setAttribute('data-full', tooltip);
+    b.setAttribute('tabindex','0');
+  };
+
   if(!state.activeVid || state.activeVid===0n){
     $('#footAp').textContent = 'нет сейфа';
     $('#footAp').className = 'badge badge-mute';
     $('#footApFull').textContent = '';
+    updHeader('mute', '🛡', 'нет сейфа', 'Антифишинг включится после открытия сейфа.\nПока сейфа нет — проверять нечего.');
     return;
   }
   try{
     const onchain = await state.vault.getAntiPhishHash(state.user, state.activeVid);
-    const key = `apv43_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
+    const key = `apv44_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
     const saved = localStorage.getItem(key);
+    const shortHash = onchain.slice(0,10);  // 0x + 8 hex
     $('#footApFull').textContent = 'отпечаток: ' + onchain.slice(0,18) + '…';
+
     if(!saved){
       localStorage.setItem(key, onchain);
       $('#footAp').textContent = 'сохранён';
       $('#footAp').className = 'badge badge-success';
       sessionLog('Антифишинг-отпечаток сохранён локально','info');
+      updHeader('', '🛡', shortHash,
+        `🛡 Антифишинг-отпечаток\n${onchain}\n\n` +
+        `Эта подпись считается из ваших фраз сейфа. Если она изменится — вы НЕ на настоящем сайте, или ваши фразы кто-то поменял.\n\n` +
+        `Запомните первые символы (${shortHash}) — они должны быть всегда одинаковые.`);
     } else if(saved.toLowerCase() !== onchain.toLowerCase()){
       $('#footAp').textContent = 'НЕ СОВПАДАЕТ';
       $('#footAp').className = 'badge badge-warn';
@@ -1430,6 +1563,10 @@ async function checkAntiphish(){
       $('#apBad').classList.remove('hidden');
       document.body.classList.add('modal-open');
       sessionLog('Внимание: антифишинг-отпечаток не совпадает','error');
+      updHeader('warn', '⚠', 'НЕ СОВПАДАЕТ',
+        `⚠ ОПАСНОСТЬ — отпечаток антифишинга изменился!\n\n` +
+        `Было: ${saved.slice(0,18)}…\nСтало: ${onchain.slice(0,18)}…\n\n` +
+        `Возможные причины:\n• Вы на фишинг-сайте\n• Контракт подменён\n• Вы недавно сменили фразы (тогда обновите хэш в модале)`);
       $('#apTrust').onclick = ()=>{
         localStorage.setItem(key, onchain);
         $('#apBad').classList.add('hidden');
@@ -1437,6 +1574,7 @@ async function checkAntiphish(){
         $('#footAp').textContent = 'обновлён';
         $('#footAp').className = 'badge badge-warn';
         toast('Антифишинг-отпечаток обновлён','warning');
+        checkAntiphish();
       };
       $('#apDeny').onclick = ()=>{
         $('#apBad').classList.add('hidden');
@@ -1446,6 +1584,10 @@ async function checkAntiphish(){
     } else {
       $('#footAp').textContent = '✓ совпадает';
       $('#footAp').className = 'badge badge-success';
+      updHeader('', '🛡', shortHash,
+        `🛡 Антифишинг: всё в порядке\n${onchain}\n\n` +
+        `Эта подпись совпадает с сохранённой — вы на настоящем сайте, фразы не менялись.\n\n` +
+        `Часть отпечатка ${shortHash} вы можете запомнить — он должен быть одинаков при каждом входе.`);
     }
   }catch(e){console.warn('antiphish',e);}
 }
@@ -1685,31 +1827,31 @@ function route(name){
 async function renderHome(){
   const root = $('#pageContent');
   if(!state.user){
+    const isMobileNoEth = !window.ethereum && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    const dappUrl = location.host + location.pathname;
+    const mmDeepLink = 'https://metamask.app.link/dapp/' + dappUrl;
     root.innerHTML = `
       <div class="card text-center py-10" style="border-color:#D4AF37">
-        <div class="mb-4 flex justify-center">
-          <svg viewBox="0 0 64 64" width="96" height="96" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="sb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a2a2a"/><stop offset="100%" stop-color="#0f0f0f"/></linearGradient>
-              <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d77a"/><stop offset="50%" stop-color="#D4AF37"/><stop offset="100%" stop-color="#a07d1f"/></linearGradient>
-            </defs>
-            <rect x="3" y="6" width="58" height="54" rx="9" fill="url(#sb)" stroke="#D4AF37" stroke-width="1.4"/>
-            <path d="M 28 21 Q 28 15, 32 15 Q 36 15, 36 21" fill="none" stroke="url(#g2)" stroke-width="2"/>
-            <rect x="26" y="20" width="12" height="9" rx="1.5" fill="url(#g2)"/>
-            <rect x="30.7" y="28" width="2.6" height="18" fill="url(#g2)"/>
-            <rect x="24" y="32" width="16" height="2.4" rx="1" fill="url(#g2)"/>
-            <path d="M 17 44 Q 17 53, 32 54 Q 47 53, 47 44" fill="none" stroke="url(#g2)" stroke-width="3.2" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <h1 class="text-xl font-bold mb-1 text-gold">AnchorVault V43</h1>
+        <div class="mb-4 flex justify-center">${anchorLogoSvg(110)}</div>
+        <h1 class="text-xl font-bold mb-1 text-gold">AnchorVault V44</h1>
         <p class="text-text-2 mb-5 text-sm">Подключите кошелёк, чтобы начать.<br>Сеть — Sepolia (тестовая).</p>
-        <button class="btn btn-gold btn-shimmer" onclick="connectWallet()">Подключить кошелёк</button>
+        ${isMobileNoEth ? `
+          <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs text-warn text-left">
+            ⚠ <b>Мобильный браузер не видит MetaMask.</b><br>
+            Обычный Chrome/Safari на телефоне не подключается к крипто-кошелькам напрямую.<br>
+            Нажмите кнопку ниже — пульт откроется во встроенном браузере MetaMask, где кошелёк работает.
+          </div>
+          <a href="${mmDeepLink}" class="btn btn-gold btn-shimmer inline-flex">🦊 Открыть в MetaMask</a>
+          <div class="text-[11px] text-text-3 mt-3">Установлен ли у вас MetaMask Mobile? Если нет — <a href="https://metamask.io/download/" target="_blank" class="text-gold hover:underline">скачать</a></div>
+        ` : `
+          <button class="btn btn-gold btn-shimmer" onclick="connectWallet()">Подключить кошелёк</button>
+        `}
       </div>`;
     return;
   }
   // загрузим vault
   let v=null;
-  try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+  try{state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);}catch{}
   if(state.activeVid && state.activeVid!==0n){
     try{v = await readVault(state.user, state.activeVid);}catch(e){console.warn('readVault',e);}
   }
@@ -1799,7 +1941,7 @@ async function callReset(){
 async function renderOpen(){
   const root = $('#pageContent');
   if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
-  try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+  try{state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);}catch{}
   if(state.activeVid && state.activeVid!==0n){
     root.innerHTML = `
       <div class="card text-center" style="border-color:#FF8C00">
@@ -1862,10 +2004,10 @@ async function renderOpen(){
           <div class="hint">Минимум: <b>${trim(fmtU(minDep,18),6)}</b></div>
         </div>
 
-        <div>
-          <label>Резервный адрес<span class="req">*</span><span class="tip" data-tip="Адрес, на который пойдут средства при «Восстановить в резерв» (10% штраф). Должен отличаться от вашего и не быть адресом контракта.">?</span></label>
-          <input id="op_em" class="mono" placeholder="0x…">
-          <div class="hint">Это адрес запасного кошелька — на случай потери основного</div>
+        <!-- Резервный адрес НЕ запрашивается в V44 — он глобальный, задан один раз через setGlobalEmergency -->
+        <div id="op_em_info" class="bg-bg-2 border border-info/30 rounded p-2.5 text-xs" style="border-color:rgba(93,163,213,.3)">
+          <div class="text-info font-semibold mb-1">🚨 Резервный адрес</div>
+          <div id="op_em_addr_box" class="text-text-2">Загружается…</div>
         </div>
       </div>
 
@@ -1987,41 +2129,37 @@ async function renderOpen(){
   // submit
   $('#op_submit').onclick = async ()=>{
     if(!$('#op_tos').checked) return toast('Подтвердите согласие с условиями','warning');
+    // V44: резервный адрес берётся из контракта (globalEmergency)
+    if(!state.globalEmergency || state.globalEmergency === ethers.ZeroAddress){
+      const r = await checkAndPromptGlobalEmergency();
+      if(!r) return toast('Сначала задайте резервный адрес','warning');
+    }
     const name = $('#op_name').value.trim();
     if(!name) return toast('Введите название','warning');
     const lvl = Number($('#op_level').value);
     const tok = sel.value;
     const meta = state.knownTokens.find(x=>x.address.toLowerCase()===tok.toLowerCase()) || state.ancr;
-    const em = $('#op_em').value.trim();
-    if(!ethers.isAddress(em)) return toast('Неверный резервный адрес','warning');
-    if(em.toLowerCase()===state.user.toLowerCase()) return toast('Резервный адрес не должен совпадать с вашим','warning');
-    if(em.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Резервный адрес не может быть адресом контракта','warning');
     const amt = $('#op_amount').value.trim();
     let wei; try{wei = ethers.parseUnits(amt, meta.decimals);}catch{return toast('Неверная сумма','warning');}
 
-    // Собираем коды в зависимости от уровня
-    // SAFE / VAULT: 2 поля от пользователя, recovery подставляется = antiPhrase
-    // FORTRESS: 3 раздельных поля
+    // Собираем коды
     const codeVal = $('#op_code')?.value || '';
     const antiVal = $('#op_anti')?.value || '';
     const recVal  = lvl === 2 ? ($('#op_rec')?.value || '') : antiVal;
     const c = {code: codeVal, anti: antiVal, rec: recVal};
 
-    // Валидация: 10–64 байт на каждую введённую фразу
     const userFields = lvl === 2 ? {code: c.code, anti: c.anti, rec: c.rec} : {code: c.code, anti: c.anti};
     for(const [k, v] of Object.entries(userFields)){
       const bytes = new TextEncoder().encode(v).length;
       if(bytes < 10) return toast('Каждая фраза должна быть не короче 10 символов','warning');
       if(bytes > 64) return toast('Каждая фраза не длиннее 64 символов','warning');
     }
-    // Предупреждение если у FORTRESS совпадают
     if(lvl === 2){
       const set = new Set([c.code, c.anti, c.rec]);
       if(set.size < 3){
         if(!confirm('У FORTRESS все три фразы должны различаться для максимальной защиты. Сейчас есть одинаковые. Открыть всё равно?')) return;
       }
     } else {
-      // SAFE/VAULT: основной код и антифишинг должны различаться
       if(c.code === c.anti){
         if(!confirm('Основной код и антифишинг-фраза одинаковые — это снижает защиту. Открыть всё равно?')) return;
       }
@@ -2031,17 +2169,18 @@ async function renderOpen(){
       <div class="space-y-1">
         <div>Сумма: <b class="text-gold">${trim(fmtU(wei,meta.decimals),6)} ${esc(meta.symbol)}</b></div>
         <div>Уровень: <b>${LEVEL_NAMES[lvl]}</b> · ${LEVEL_DESC[lvl]}</div>
-        <div>Резервный: <span class="mono text-xs">${esc(em)}</span></div>
-        <div class="text-warn text-xs mt-2">⚠ ${lvl===2 ? 'Запомните все 3 фразы!' : 'Запомните обе фразы!'} Без них доступ только через аварийный вывод со штрафом.</div>
+        <div>Резервный: <span class="mono text-xs">${esc(state.globalEmergency)}</span></div>
+        <div class="text-warn text-xs mt-2">⚠ ${lvl===2 ? 'Запомните все 3 фразы!' : 'Запомните обе фразы!'}</div>
       </div>`);
     if(!ok) return;
-    const params = {name, code:c.code, antiPhrase:c.anti, recovery:c.rec, amount:wei, emergencyAddress:em};
+    // V44 VaultParams: name/code/antiPhrase/recovery/amount (БЕЗ emergencyAddress)
+    const params = {name, code:c.code, antiPhrase:c.anti, recovery:c.rec, amount:wei};
     const rc = await txCall('Открыть сейф', state.vault.openVault(tok, params, lvl));
     if(rc){
-      try{state.activeVid = await state.vault.activeVaultId(state.user);}catch{}
+      try{state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS);}catch{}
       await checkAntiphish();
       await refreshMetrics();
-      ['op_name','op_amount','op_em','op_code','op_anti','op_rec'].forEach(id=>{if($('#'+id))$('#'+id).value='';});
+      ['op_name','op_amount','op_code','op_anti','op_rec'].forEach(id=>{if($('#'+id))$('#'+id).value='';});
       route('home');
     }
   };
@@ -2052,13 +2191,89 @@ function showTOS(){
   $('#tosCheck').checked = false;
   $('#tosAccept').disabled = true;
   $('#tosCheck').onchange = e=>$('#tosAccept').disabled = !e.target.checked;
-  $('#tosAccept').onclick = ()=>{
-    localStorage.setItem('av_tos43','1');
+  $('#tosAccept').onclick = async ()=>{
+    localStorage.setItem('av_tos44','1');
     state.tosAccepted = true;
     $('#tosModal').classList.add('hidden');
     document.body.classList.remove('modal-open');
     sessionLog('Условия приняты','info');
+    // Сразу проверяем резервный адрес
+    await checkAndPromptGlobalEmergency();
   };
+}
+
+/* Проверка резервного адреса и onboarding если он не задан.
+   В V44 globalEmergency ставится РАЗ И НАВСЕГДА — модал блокирующий. */
+async function checkAndPromptGlobalEmergency(){
+  if(!state.vault || !state.user) return null;
+  let em;
+  try{
+    em = await state.vault.getGlobalEmergency(state.user);
+  }catch(e){
+    sessionLog('Не удалось прочитать globalEmergency: '+parseError(e),'warning');
+    return null;
+  }
+  if(em && em !== ethers.ZeroAddress){
+    sessionLog(`Резервный адрес уже задан: ${short(em,6,4)}`,'info');
+    state.globalEmergency = em;
+    return em;
+  }
+  // Не задан — показываем onboarding-модал
+  return await showGlobalEmergencyOnboarding();
+}
+
+function showGlobalEmergencyOnboarding(){
+  return new Promise(resolve=>{
+    const m = $('#geModal');
+    m.classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    $('#geAddr').value = '';
+    $('#geCheck1').checked = false;
+    $('#geCheck2').checked = false;
+    $('#geCheck3').checked = false;
+    $('#geSubmit').disabled = true;
+    const recheck = ()=>{
+      const addrOk = ethers.isAddress(($('#geAddr').value||'').trim());
+      const allChecked = $('#geCheck1').checked && $('#geCheck2').checked && $('#geCheck3').checked;
+      $('#geSubmit').disabled = !(addrOk && allChecked);
+    };
+    $('#geAddr').oninput = recheck;
+    $('#geCheck1').onchange = recheck;
+    $('#geCheck2').onchange = recheck;
+    $('#geCheck3').onchange = recheck;
+    $('#gePaste').onclick = async ()=>{
+      try{ const txt = await navigator.clipboard.readText(); $('#geAddr').value = txt.trim(); recheck(); }
+      catch{ toast('Не удалось прочитать буфер — вставьте Ctrl+V','warning'); }
+    };
+    $('#geSubmit').onclick = async ()=>{
+      const a = $('#geAddr').value.trim();
+      if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+      if(a.toLowerCase()===state.user.toLowerCase()) return toast('Резервный адрес не должен совпадать с вашим основным кошельком','warning');
+      if(a.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Это адрес контракта — не подходит','warning');
+      if(a===ethers.ZeroAddress) return toast('Нулевой адрес не подходит','warning');
+      const ok = await confirmModal('Окончательное подтверждение',
+        `<div class="text-warn"><b>Адрес ${short(a,8,6)} будет вашим резервным НАВСЕГДА.</b><br><br>` +
+        `Изменить его потом не получится — это защита от взлома вашего основного кошелька.<br><br>` +
+        `Уверены что у вас есть полный доступ к этому адресу?</div>`);
+      if(!ok) return;
+      const rc = await txCall('Установить резервный адрес', state.vault.setGlobalEmergency(a));
+      if(rc){
+        state.globalEmergency = a;
+        m.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        toast('Резервный адрес установлен на ' + short(a,6,4),'success');
+        sessionLog(`✓ Резервный адрес установлен: ${a}`,'success');
+        resolve(a);
+      }
+    };
+    $('#geCancel').onclick = ()=>{
+      m.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+      sessionLog('Установка резервного адреса отложена — функции открытия сейфа ограничены','warning');
+      toast('Без резервного адреса нельзя открывать сейфы','warning');
+      resolve(null);
+    };
+  });
 }
 
 /* ==========================================================================
@@ -2067,7 +2282,7 @@ function showTOS(){
 async function renderDeposit(){
   const root = $('#pageContent');
   if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   if(!state.activeVid || state.activeVid===0n){
     root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа<br><button class="btn btn-gold mt-3" onclick="route('open')">Открыть</button></div>`;
     return;
@@ -2110,7 +2325,7 @@ async function renderDeposit(){
 async function renderWithdraw(){
   const root = $('#pageContent');
   if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   if(!state.activeVid || state.activeVid===0n){
     root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
     return;
@@ -2186,7 +2401,7 @@ async function renderTransfersHub(){
 
   // Какой таб открыть по умолчанию? Если есть активный сейф — оставляем последний выбор пользователя,
   // если сейфа нет — принудительно "простой".
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   const hasVault = !!(state.activeVid && state.activeVid!==0n);
   let mode = localStorage.getItem('av_tab_transfers') || 'simple';
   if(!hasVault) mode = 'simple';
@@ -2385,7 +2600,7 @@ async function renderProtectedTransfer(host){
     if(to.toLowerCase()===state.user.toLowerCase()) return toast('Нельзя передать самому себе','warning');
     if(to.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Нельзя передать контракту','warning');
     try{
-      const recVid = await state.vault.activeVaultId(to);
+      const recVid = await state.vault.activeVaultIdByToken(to, CONFIG.ANCR_ADDRESS);
       if(recVid && recVid!==0n) return toast('У получателя уже есть активный сейф','warning');
     }catch{}
     const code = $('#tr_code').value, anti = $('#tr_anti').value;
@@ -2414,7 +2629,7 @@ async function renderProtectedTransfer(host){
 async function renderEmergency(){
   const root = $('#pageContent');
   if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   if(!state.activeVid || state.activeVid===0n){
     root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
     return;
@@ -2438,7 +2653,7 @@ async function renderEmergency(){
         Все три варианта <b>мгновенные</b>, со штрафом — но без ожиданий и таймлоков.
       </p>
       <div class="bg-bg-2 border rounded-lg p-3 text-xs text-warn" style="border-color:rgba(255,140,0,.4)">
-        ⚠ <b>Контракт V43 требует код для любого вывода</b>, в том числе на резервный адрес.
+        ⚠ <b>Контракт V44 требует код для любого вывода</b>, в том числе на резервный адрес.
         ${isLite
           ? `На уровне <b>${LEVEL_NAMES[v.level]}</b> аварийный код = антифишинг-фраза, заданная при открытии сейфа.`
           : `Аварийный код — третья отдельная фраза, заданная при открытии сейфа.`}
@@ -2517,7 +2732,7 @@ async function renderEmergency(){
 async function renderSettings(){
   const root = $('#pageContent');
   if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   if(!state.activeVid || state.activeVid===0n){
     root.innerHTML = `<div class="card text-center"><div class="text-3xl mb-2">📭</div>Нет активного сейфа</div>`;
     return;
@@ -2619,7 +2834,7 @@ async function renderSettings(){
     const nc = {newCode, newAntiPhrase:newAnti, newRecovery:newRec};
     const rc = await txCall('Сменить фразы', state.vault.rotateCodes(state.activeVid, oc, or, nc));
     if(rc){
-      const key = `apv43_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
+      const key = `apv44_${state.user.toLowerCase()}_${state.activeVid.toString()}`;
       localStorage.removeItem(key);
       await checkAntiphish();
       route('home');
@@ -2664,7 +2879,7 @@ async function renderOperations(){
     root.innerHTML = `<div class="card text-center">Подключите кошелёк</div>`;
     return;
   }
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   const hasVault = !!(state.activeVid && state.activeVid!==0n);
 
   // Какой таб открыть: по умолчанию запоминаем последний выбор
@@ -2859,7 +3074,7 @@ async function renderProfile(){
   ensureWalletInProfile(state.user, profile);
 
   // Активный сейф
-  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  state.activeVid = await state.vault.activeVaultIdByToken(state.user, CONFIG.ANCR_ADDRESS).catch(()=>0n);
   let v = null;
   if(state.activeVid && state.activeVid !== 0n){
     try{v = await readVault(state.user, state.activeVid);}catch{}
@@ -2893,6 +3108,18 @@ async function renderProfile(){
         <button class="btn btn-sm" id="pf_set_label">✏ Изменить метку</button>
         <button class="btn btn-sm" onclick="navigator.clipboard.writeText('${state.user}');toast('Адрес скопирован','info',1500)">📋 Скопировать адрес</button>
       </div>
+    </div>
+
+    <!-- Резервный адрес (globalEmergency) -->
+    <div class="card mb-3" id="pf_emergency_card">
+      <div class="card-h">
+        <h2>🚨 Резервный адрес</h2>
+        <span class="badge ${state.globalEmergency && state.globalEmergency !== ethers.ZeroAddress ? 'badge-success' : 'badge-warn'}">
+          ${state.globalEmergency && state.globalEmergency !== ethers.ZeroAddress ? 'установлен' : 'не задан'}
+        </span>
+      </div>
+      <p class="text-text-2 text-xs mb-2">Куда уйдут средства если вы нажмёте кнопку «ПАНИКА». В V44 ставится <b>один раз и навсегда</b> — это защита от подмены при взломе основного кошелька.</p>
+      <div id="pf_emergency_body"></div>
     </div>
 
     <!-- Активный сейф -->
@@ -2986,6 +3213,50 @@ async function renderProfile(){
         <div class="text-text-2">Резервный: <span class="mono text-warn">${short(s.emergencyAddress,6,4)}</span>${emLabel?` <span class="text-gold">(${esc(emLabel)})</span>`:''}</div>
       </div>`;
     }).join('');
+  }
+
+  // Резервный адрес — подгружаем из контракта (если ещё не в state)
+  if(!state.globalEmergency){
+    try{
+      const em = await state.vault.getGlobalEmergency(state.user);
+      state.globalEmergency = em;
+    }catch{}
+  }
+  const emBox = $('#pf_emergency_body');
+  if(state.globalEmergency && state.globalEmergency !== ethers.ZeroAddress){
+    const em = state.globalEmergency;
+    const emLabel = profile.wallets[em.toLowerCase()]?.label || '';
+    emBox.innerHTML = `
+      <div class="stat">
+        <div class="stat-label flex items-center gap-1">Адрес
+          <button onclick="navigator.clipboard.writeText('${em}');toast('Скопирован','info',1500)" class="text-text-3 hover:text-gold" title="Скопировать">📋</button>
+          <a href="${CONFIG.EXPLORER}/address/${em}" target="_blank" class="text-text-3 hover:text-gold" title="Etherscan">↗</a>
+        </div>
+        <div class="stat-value text-warn">${short(em,10,8)}</div>
+        <div class="hint mono">${em}</div>
+      </div>
+      <div class="mt-2 text-xs">
+        Метка: <b class="text-gold">${esc(emLabel || 'не задана')}</b>
+        · <button class="text-info hover:underline" onclick="setWalletLabel('${em}')">изменить</button>
+      </div>
+      <div class="hint mt-2">⚠ Этот адрес зафиксирован в контракте и поменять его невозможно. Если потеряете к нему доступ — потеряете последнюю линию защиты.</div>
+    `;
+    // Ensure wallet known in local profile
+    ensureWalletInProfile(em, profile);
+  } else {
+    emBox.innerHTML = `
+      <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 text-xs text-warn mb-2">
+        ⚠ Резервный адрес ещё не установлен. Без него вы не сможете открывать сейфы и использовать функцию ПАНИКА.
+      </div>
+      <button class="btn btn-warn btn-sm" id="pf_set_emergency">🚨 Установить резервный адрес</button>
+    `;
+    setTimeout(()=>{
+      const b = $('#pf_set_emergency');
+      if(b) b.onclick = async ()=>{
+        const r = await checkAndPromptGlobalEmergency();
+        if(r) route('profile');
+      };
+    },10);
   }
 
   // Обработчики
@@ -3148,8 +3419,8 @@ async function renderHistory(){
 async function setContractAddress(){
   const cur = CONFIG.CONTRACT_ADDRESS;
   const a = await inputAddressModal(
-    'Адрес контракта V43',
-    'Введите адрес смарт-контракта AnchorVault V43 на Sepolia.<br><br>' +
+    'Адрес контракта V44',
+    'Введите адрес смарт-контракта AnchorVault V44 на Sepolia.<br><br>' +
     '<span class="text-text-3 text-xs">Это НЕ адрес кошелька деплоера и НЕ адрес ANCR-токена — это адрес самого контракта V43.</span>',
     cur === '0x0000000000000000000000000000000000000000' ? '' : cur
   );
@@ -3184,7 +3455,7 @@ async function setContractAddress(){
     sessionLog(`Проверка адреса упала: ${parseError(e)}. Сохраняю как есть.`,'warning');
   }
   CONFIG.CONTRACT_ADDRESS = a;
-  localStorage.setItem('av_v43_address', a);
+  localStorage.setItem('av_v44_address', a);
   $('#hContract').textContent = a;
   $('#footEtherscan').href = `${CONFIG.EXPLORER}/address/${a}`;
   toast('Адрес контракта сохранён','success');
@@ -3283,6 +3554,7 @@ function bindNav(){
   };
   $('#btnAddAncr').onclick = addAncrToWallet;
   $('#btnSetContract').onclick = setContractAddress;
+  $('#btnProfile').onclick = ()=>route('profile');
   $('#hContract').textContent = CONFIG.CONTRACT_ADDRESS;
   $('#langSelect').onchange = e=>{
     state.lang = e.target.value;
@@ -3296,12 +3568,32 @@ async function init(){
   bindNav();
   applyLang();
   renderSlog();
-  sessionLog('Пульт V43 загружен','info');
+
+  // Подгружаем логотип в сайдбар
+  const sl = document.getElementById('sidebarLogo');
+  if(sl) sl.innerHTML = anchorLogoSvg(44);
+
+  // Динамический favicon
+  try{
+    const fav = document.querySelector("link[rel='icon']") || document.createElement('link');
+    fav.rel = 'icon';
+    fav.type = 'image/svg+xml';
+    fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(anchorLogoSvg(64));
+    document.head.appendChild(fav);
+  }catch{}
+
+  sessionLog('Пульт V44 загружен','info');
 
   // показать предупреждение если контракт ещё не подставлен
   if(CONFIG.CONTRACT_ADDRESS==='0x0000000000000000000000000000000000000000'){
-    sessionLog('Адрес контракта V43 не задан. Нажмите ✏ в шапке, чтобы ввести адрес после деплоя.','warning');
-    toast('Адрес контракта V43 не задан. Нажмите ✏ в шапке и введите адрес V43 после деплоя.','warning',10000);
+    sessionLog('Адрес контракта V44 не задан. Нажмите ✏ в шапке, чтобы ввести адрес после деплоя.','warning');
+    toast('Адрес контракта V44 не задан. Нажмите ✏ в шапке и введите адрес V44 после деплоя.','warning',10000);
+  }
+
+  // Мобильный браузер без MetaMask — показываем подсказку
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  if(isMobile && !window.ethereum){
+    sessionLog('Мобильный браузер не видит MetaMask. Откройте пульт во встроенном браузере MetaMask Mobile.','warning');
   }
 
   try{
