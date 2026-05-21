@@ -111,15 +111,18 @@
   .card-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap}
   .card-h h2{font-size:14px;font-weight:700;letter-spacing:.02em;color:#e8e8e8}
 
-  /* Инпуты */
+  /* Инпуты — компактные, не растянутые на всю ширину карточки */
   input,select,textarea{
     width:100%;
+    max-width:380px;
     background:#262626;
     border:1.5px solid #4a4a4a;
     color:#ffffff;
-    border-radius:8px;padding:11px 13px;font-size:13.5px;outline:none;transition:all .15s;
+    border-radius:7px;padding:8px 11px;font-size:13px;outline:none;transition:all .15s;
     font-family:inherit;
   }
+  /* Поля адреса и сумм могут быть шире — но не на всю карточку */
+  input.mono{max-width:460px;font-size:12.5px}
   input:hover:not(:disabled):not(:focus),
   select:hover:not(:disabled):not(:focus),
   textarea:hover:not(:disabled):not(:focus){
@@ -128,14 +131,16 @@
   input:focus,select:focus,textarea:focus{
     border-color:#D4AF37;
     background:#1a1a1a;
-    box-shadow:0 0 0 3px rgba(212,175,55,.2);
+    box-shadow:0 0 0 2px rgba(212,175,55,.2);
   }
   input::placeholder,textarea::placeholder{color:#8a8a8a;font-weight:400}
   input:disabled,select:disabled{opacity:.5;cursor:not-allowed;background:#161616}
-  /* Чекбоксы — золотой акцент */
+  input[type=number]{max-width:140px}
+  input[type=datetime-local]{max-width:240px}
+  /* Чекбоксы */
   input[type=checkbox]{
     appearance:none;-webkit-appearance:none;
-    width:18px;height:18px;min-width:18px;
+    width:18px;height:18px;min-width:18px;max-width:18px;
     background:#262626;border:2px solid #6a6a6a;border-radius:4px;
     padding:0;cursor:pointer;position:relative;transition:.15s;
   }
@@ -146,16 +151,17 @@
     color:#0f0f0f;font-weight:900;font-size:13px;line-height:1;
   }
   label{display:flex;align-items:center;font-size:11px;font-weight:600;
-    text-transform:uppercase;letter-spacing:.04em;color:#cfcfcf;margin-bottom:7px}
+    text-transform:uppercase;letter-spacing:.04em;color:#cfcfcf;margin-bottom:6px}
   label .req{color:#FF8C00;margin-left:3px}
-  .hint{font-size:11.5px;color:#9a9a9a;margin-top:5px;line-height:1.4}
+  .hint{font-size:11px;color:#9a9a9a;margin-top:4px;line-height:1.4}
   .err-text{font-size:11px;color:#FF8C00;margin-top:5px}
 
-  /* Кнопки */
+  /* Кнопки — компактные, не растянутые */
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
-    padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;
-    cursor:pointer;transition:.15s;border:1px solid #3a3a3a;background:#202020;color:#e8e8e8
+    padding:7px 14px;border-radius:7px;font-size:12.5px;font-weight:600;
+    cursor:pointer;transition:.15s;border:1px solid #3a3a3a;background:#202020;color:#e8e8e8;
+    max-width:260px;
   }
   .btn:hover:not(:disabled){border-color:#D4AF37;color:#D4AF37}
   .btn:disabled{opacity:.4;cursor:not-allowed}
@@ -167,7 +173,9 @@
   .btn-warn{background:#FF8C00;color:#0f0f0f;border:0;font-weight:700}
   .btn-warn:hover:not(:disabled){filter:brightness(1.1);color:#0f0f0f}
   .btn-success{background:#4ade80;color:#0f0f0f;border:0;font-weight:700}
-  .btn-sm{padding:6px 10px;font-size:11px}
+  .btn-sm{padding:5px 9px;font-size:11px;max-width:200px}
+  /* w-full на кнопке отменяем максимальную ширину — пусть растягивается только если явно надо */
+  .btn.w-full{max-width:none}
 
   /* Stat-карточка */
   .stat{padding:12px 14px;background:#0f0f0f;border-radius:10px;border:1px solid #2a2a2a}
@@ -233,6 +241,23 @@
   }
   .lvl-fortress.active .lvl-name,.lvl-fortress.active .lvl-desc{color:#0f0f0f}
   .lvl-fortress.active .lvl-tag{background:rgba(0,0,0,.2);color:#0f0f0f}
+
+  /* Кнопка-аватар «Личный кабинет» */
+  .profile-btn{
+    display:flex;align-items:center;gap:8px;background:transparent;border:0;cursor:pointer;
+    padding:4px 8px 4px 4px;border-radius:20px;transition:.15s;color:#a0a0a0;
+    font-family:inherit;font-size:12px;font-weight:600;
+  }
+  .profile-btn:hover{background:#1a1a1a;color:#D4AF37}
+  .profile-avatar{
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,#D4AF37,#b8941e);color:#0f0f0f;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:12px;letter-spacing:.5px;
+    box-shadow:0 0 0 2px #2a2a2a;
+    flex-shrink:0;
+  }
+  .profile-label{font-size:11px;font-weight:600;letter-spacing:.04em}
 
   /* Шапка с метриками */
   .metric-strip{
@@ -326,11 +351,9 @@
     <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5" id="navMenu">
       <div class="nav-item active" data-route="home"><span class="ico">🏠</span><span>Главная</span></div>
       <div class="nav-item" data-route="open"><span class="ico">➕</span><span>Открыть сейф</span></div>
-      <div class="nav-item" data-route="deposit"><span class="ico">📥</span><span>Пополнить</span></div>
-      <div class="nav-item" data-route="withdraw"><span class="ico">📤</span><span>Вывести</span></div>
+      <div class="nav-item" data-route="ops"><span class="ico">💱</span><span>Операции</span></div>
       <div class="nav-item" data-route="emergency"><span class="ico">🚨</span><span>Аварийный</span></div>
       <div class="nav-item" data-route="settings"><span class="ico">🛠</span><span>Настройки сейфа</span></div>
-      <div class="nav-item" data-route="transfers"><span class="ico">💸</span><span>Переводы</span></div>
       <div class="nav-item" data-route="history"><span class="ico">📜</span><span>История</span></div>
     </nav>
     <div class="px-3 py-3 border-t border-border text-[11px] space-y-1.5">
@@ -369,6 +392,11 @@
         <option value="en">EN</option>
         <option value="zh">ZH</option>
       </select>
+      <!-- Аватарка-кружок «Личный кабинет» -->
+      <button id="btnProfile" class="profile-btn" title="Личный кабинет" data-route="profile">
+        <span id="profileAvatar" class="profile-avatar">👤</span>
+        <span class="profile-label hidden md:block">Кабинет</span>
+      </button>
       <button id="btnConnect" class="btn btn-gold btn-shimmer">Подключить кошелёк</button>
     </header>
 
@@ -490,8 +518,8 @@ const CONFIG = {
     if(saved && saved!=='0x0000000000000000000000000000000000000000' && /^0x[0-9a-fA-F]{40}$/.test(saved)) return saved;
     return '0xC946d1018C2D263C1C0a241c08D612827F6bD89f';
   })(),
-  ANCR_ADDRESS:     '0x2eC26403084A4b3102059C70E349409288c1B1EE',
-  GUARDIAN_ADDRESS: '0x528460cED8Ec256FF2c9f8Ac359f4fa0150996C8',
+  ANCR_ADDRESS:     '0xbd72aAb70c67cdFc3683747158177F962997fbC1',
+  GUARDIAN_ADDRESS: '0x13ACB3b72c62A969753Ca4Ea04666B0e43c96dDa',
   CHAIN_ID:         11155111n,
   CHAIN_HEX:        '0xaa36a7',
   CHAIN_NAME:       'Sepolia',
@@ -1627,9 +1655,14 @@ function validateCodes(obj){
    Роутер
    ========================================================================== */
 const ROUTES = {
-  home:renderHome, open:renderOpen, deposit:renderDeposit, withdraw:renderWithdraw,
+  home:renderHome, open:renderOpen,
+  ops:renderOperations,                          // единый хаб: пополнить/вывести/передать/простой перевод
+  deposit:renderOperations,                      // legacy-alias (старые ссылки)
+  withdraw:renderOperations,                     // legacy-alias
+  transfers:renderOperations,                    // legacy-alias
   emergency:renderEmergency, settings:renderSettings,
-  transfers:renderTransfersHub, history:renderHistory
+  history:renderHistory,
+  profile:renderProfile                          // личный кабинет
 };
 function route(name){
   state.route = name;
@@ -2619,6 +2652,451 @@ async function renderSettings(){
     const rc = await txCall('Сменить резервный адрес', state.vault.changeEmergencyAddress(state.activeVid, a, $('#ch_rec').value));
     if(rc) route('settings');
   };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Операции (единый хаб для всех операций с активным сейфом и ERC-20)
+   Табы: Пополнить · Вывести · Передать сейф · Простой перевод
+   ========================================================================== */
+async function renderOperations(){
+  const root = $('#pageContent');
+  if(!state.user){
+    root.innerHTML = `<div class="card text-center">Подключите кошелёк</div>`;
+    return;
+  }
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  const hasVault = !!(state.activeVid && state.activeVid!==0n);
+
+  // Какой таб открыть: по умолчанию запоминаем последний выбор
+  let mode = localStorage.getItem('av_tab_ops') || (hasVault ? 'deposit' : 'simple');
+  if(!hasVault && mode !== 'simple') mode = 'simple';
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h">
+        <h2>💱 Операции</h2>
+        <div class="text-[11px] text-text-3">${hasVault?'Сейф №'+state.activeVid+' активен':'Сейфа нет — доступен только простой перевод'}</div>
+      </div>
+
+      <!-- Табы операций -->
+      <div class="ops-tabs" id="ops_tabs">
+        <button type="button" class="ops-tab ${mode==='deposit'?'active':''}" data-mode="deposit" ${hasVault?'':'disabled'}>
+          <span class="ops-tab-ico">📥</span><span>Пополнить</span>
+        </button>
+        <button type="button" class="ops-tab ${mode==='withdraw'?'active':''}" data-mode="withdraw" ${hasVault?'':'disabled'}>
+          <span class="ops-tab-ico">📤</span><span>Вывести</span>
+        </button>
+        <button type="button" class="ops-tab ${mode==='vault-transfer'?'active':''}" data-mode="vault-transfer" ${hasVault?'':'disabled'}>
+          <span class="ops-tab-ico">🛡</span><span>Передать сейф</span>
+        </button>
+        <button type="button" class="ops-tab ${mode==='simple'?'active':''}" data-mode="simple">
+          <span class="ops-tab-ico">⚡</span><span>Простой перевод</span>
+        </button>
+      </div>
+
+      <div id="ops_content" class="mt-4"></div>
+    </div>
+  `;
+
+  // Стили табов (один раз)
+  if(!document.getElementById('ops_tabs_styles')){
+    const st = document.createElement('style');
+    st.id = 'ops_tabs_styles';
+    st.textContent = `
+      .ops-tabs{
+        display:flex;gap:6px;flex-wrap:wrap;
+        border-bottom:1px solid #2a2a2a;padding-bottom:8px;margin-top:6px;
+      }
+      .ops-tab{
+        display:inline-flex;align-items:center;gap:6px;
+        background:transparent;border:1px solid #2a2a2a;border-radius:7px;
+        padding:6px 11px;font-size:12px;font-weight:600;color:#a0a0a0;
+        cursor:pointer;transition:.15s;font-family:inherit;
+      }
+      .ops-tab:hover:not(:disabled){border-color:#5a5a5a;color:#e8e8e8}
+      .ops-tab:disabled{opacity:.4;cursor:not-allowed}
+      .ops-tab.active{background:rgba(212,175,55,.12);border-color:#D4AF37;color:#D4AF37}
+      .ops-tab-ico{font-size:13px;line-height:1}
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Переключение
+  $$('#ops_tabs button').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.disabled) return;
+      mode = b.dataset.mode;
+      localStorage.setItem('av_tab_ops', mode);
+      $$('#ops_tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderOpsMode();
+    };
+  });
+
+  async function renderOpsMode(){
+    const c = $('#ops_content');
+    c.innerHTML = '<div class="text-text-3 text-sm py-4">Загрузка…</div>';
+    try{
+      if(mode === 'deposit') await renderDepositInto(c);
+      else if(mode === 'withdraw') await renderWithdrawInto(c);
+      else if(mode === 'vault-transfer') await renderProtectedTransfer(c);
+      else await renderSimpleSend(c);
+      bindTipsFocus(c);
+    }catch(e){
+      c.innerHTML = `<div class="text-warn text-sm">${esc(e.message||String(e))}</div>`;
+    }
+  }
+  renderOpsMode();
+}
+
+/* === Пополнить (используется внутри Операций) === */
+async function renderDepositInto(host){
+  const v = await readVault(state.user, state.activeVid);
+  host.innerHTML = `
+    ${vaultReminderCard(v)}
+    ${failCountBanner(v)}
+    <div class="space-y-3" style="max-width:480px">
+      <div class="stat">
+        <div class="stat-label">Текущий баланс сейфа</div>
+        <div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</div>
+      </div>
+      <div>
+        <label>Сумма пополнения<span class="req">*</span><span class="tip" data-tip="Из суммы будет вычтена депозит-комиссия уровня сейфа.">?</span></label>
+        <input id="dp_amt" type="text" inputmode="decimal" placeholder="0.0">
+      </div>
+      ${codeField('dp_code','🔑 Основной код','Длина 10–64. Используется при пополнении.')}
+      <button class="btn btn-gold btn-shimmer" id="dp_submit">📥 Пополнить</button>
+    </div>
+  `;
+  bindEyes(host);
+  $('#dp_submit').onclick = async ()=>{
+    const a = $('#dp_amt').value.trim();
+    const code = $('#dp_code').value;
+    if(!a) return toast('Укажите сумму','warning');
+    let wei; try{wei = ethers.parseUnits(a, v.tokenMeta.decimals);}catch{return toast('Неверная сумма','warning');}
+    try{await ensureAllowance(v.token, wei);}catch(e){return toast(parseError(e),'error');}
+    const rc = await txCall('Пополнить сейф', state.vault.depositToVault(state.activeVid, wei, code));
+    if(rc){await refreshMetrics();renderOperations();}
+  };
+}
+
+/* === Вывести (используется внутри Операций) === */
+async function renderWithdrawInto(host){
+  const v = await readVault(state.user, state.activeVid);
+  host.innerHTML = `
+    ${vaultReminderCard(v)}
+    ${failCountBanner(v)}
+    <div class="space-y-3" style="max-width:480px">
+      <p class="text-text-2 text-xs">Мгновенная операция. Комиссия 0.5%.</p>
+      <div class="stat">
+        <div class="stat-label">В сейфе</div>
+        <div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</div>
+      </div>
+      <div>
+        <label>Сумма<span class="req">*</span><span class="tip" data-tip="Не больше баланса сейфа. Будет удержана комиссия 0.5%.">?</span></label>
+        <input id="wd_amt" type="text" inputmode="decimal" placeholder="0.0">
+        <button class="btn btn-sm mt-2" onclick="$('#wd_amt').value='${fmtU(v.amount,v.tokenMeta.decimals)}';$('#wd_amt').dispatchEvent(new Event('input'))">Вывести всё</button>
+      </div>
+      <div>
+        <label>Куда отправить<span class="req">*</span><span class="tip" data-tip="По умолчанию — ваш адрес.">?</span></label>
+        <input id="wd_to" class="mono" placeholder="0x…" value="${state.user}">
+      </div>
+      ${codeField('wd_code','🔑 Основной код','Длина 10–64.')}
+      ${codeField('wd_anti','🛡 Антифишинг-фраза','Длина 10–64.')}
+      <div class="bg-bg-2 border border-border rounded p-2.5 text-xs">
+        <span class="text-text-3">Получите примерно:</span>
+        <span id="wd_preview" class="text-gold font-bold mono ml-2">—</span>
+      </div>
+      <button class="btn btn-gold btn-shimmer" id="wd_submit">📤 Вывести</button>
+    </div>
+  `;
+  bindEyes(host);
+  $('#wd_amt').addEventListener('input',()=>{
+    const a = $('#wd_amt').value.trim();
+    if(!a){$('#wd_preview').textContent='—';return;}
+    try{
+      const wei = ethers.parseUnits(a, v.tokenMeta.decimals);
+      const fee = wei * 50n / 10000n;
+      const net = wei - fee;
+      $('#wd_preview').textContent = `${trim(fmtU(net,v.tokenMeta.decimals),6)} ${v.tokenMeta.symbol} (комиссия ${trim(fmtU(fee,v.tokenMeta.decimals),6)})`;
+    }catch{$('#wd_preview').textContent='—';}
+  });
+  $('#wd_submit').onclick = async ()=>{
+    const a = $('#wd_amt').value.trim();
+    const to = $('#wd_to').value.trim();
+    if(!a) return toast('Укажите сумму','warning');
+    if(!ethers.isAddress(to)) return toast('Неверный адрес получателя','warning');
+    let wei; try{wei = ethers.parseUnits(a, v.tokenMeta.decimals);}catch{return toast('Неверная сумма','warning');}
+    if(wei > v.amount) return toast('Сумма больше баланса сейфа','warning');
+    const code = $('#wd_code').value, anti = $('#wd_anti').value;
+    const ok = await confirmModal('Подтвердите вывод',`Отправить <b class="text-gold">${a} ${esc(v.tokenMeta.symbol)}</b> на ${short(to,8,6)}? Комиссия 0.5%.`);
+    if(!ok) return;
+    const rc = await txCall('Вывод из сейфа', state.vault.withdrawFromVault(state.activeVid, wei, to, code, anti));
+    if(rc){await refreshMetrics();route('home');}
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Личный кабинет
+   Все «памятки» в одном месте: какой кошелёк, какие резервные, метки кошельков,
+   локальные заметки, экспорт/импорт JSON.
+   ========================================================================== */
+async function renderProfile(){
+  const root = $('#pageContent');
+  if(!state.user){
+    root.innerHTML = `<div class="card text-center">
+      <div class="text-3xl mb-2">👤</div>
+      <div class="font-bold mb-2">Личный кабинет</div>
+      <p class="text-text-2 text-sm mb-3">Подключите кошелёк, чтобы открыть кабинет.</p>
+      <button class="btn btn-gold btn-shimmer" onclick="connectWallet()">Подключить кошелёк</button>
+    </div>`;
+    return;
+  }
+
+  // Загружаем профиль из localStorage
+  const profile = loadProfile();
+  // Сохраним текущий кошелёк в список если его нет
+  ensureWalletInProfile(state.user, profile);
+
+  // Активный сейф
+  state.activeVid = await state.vault.activeVaultId(state.user).catch(()=>0n);
+  let v = null;
+  if(state.activeVid && state.activeVid !== 0n){
+    try{v = await readVault(state.user, state.activeVid);}catch{}
+  }
+
+  // История открытых сейфов (запомним при первом обнаружении)
+  if(v) rememberVaultInProfile(v, state.user, profile);
+
+  const meLabel = profile.wallets[state.user.toLowerCase()]?.label || '';
+
+  root.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-h"><h2>👤 Личный кабинет</h2><span class="badge badge-gold">локально в браузере</span></div>
+      <p class="text-text-2 text-xs">Здесь все ваши памятки в одном месте: какой кошелёк, какие резервные адреса, заметки. Данные хранятся <b>только в этом браузере</b> — ничего не уходит на сервер. Сделайте бэкап JSON, чтобы не потерять при переустановке.</p>
+    </div>
+
+    <!-- Текущий кошелёк -->
+    <div class="card mb-3">
+      <div class="card-h"><h2>Текущий кошелёк</h2><span class="badge badge-success">подключён</span></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-xs">
+        <div class="stat">
+          <div class="stat-label">Адрес</div>
+          <div class="stat-value">${short(state.user,8,6)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Метка</div>
+          <div class="stat-value text-gold">${esc(meLabel || 'не задана')}</div>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-sm" id="pf_set_label">✏ Изменить метку</button>
+        <button class="btn btn-sm" onclick="navigator.clipboard.writeText('${state.user}');toast('Адрес скопирован','info',1500)">📋 Скопировать адрес</button>
+      </div>
+    </div>
+
+    <!-- Активный сейф -->
+    ${v ? `
+    <div class="card mb-3">
+      <div class="card-h"><h2>🔐 Активный сейф №${v.id}</h2><span class="badge ${LEVEL_BADGE[v.level]||'badge-info'}">${LEVEL_NAMES[v.level]}</span></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <div class="stat"><div class="stat-label">Баланс</div><div class="stat-value gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</div></div>
+        <div class="stat"><div class="stat-label">Открыт</div><div class="stat-value text-sm">${fmtDate(v.depositedAt)}</div></div>
+        <div class="stat sm:col-span-2">
+          <div class="stat-label flex items-center gap-1">🚨 Резервный адрес
+            <button onclick="navigator.clipboard.writeText('${v.emergencyAddress}');toast('Резервный скопирован','info',1500)" class="text-text-3 hover:text-gold" title="Скопировать">📋</button>
+            <a href="${CONFIG.EXPLORER}/address/${v.emergencyAddress}" target="_blank" class="text-text-3 hover:text-gold" title="Etherscan">↗</a>
+          </div>
+          <div class="stat-value text-warn">${v.emergencyAddress}</div>
+          <div class="hint">Метка: <b class="text-gold">${esc(profile.wallets[v.emergencyAddress.toLowerCase()]?.label || 'не задана')}</b> · <button class="text-info hover:underline" onclick="setWalletLabel('${v.emergencyAddress}')">изменить</button></div>
+        </div>
+      </div>
+    </div>
+    ` : `
+    <div class="card mb-3 text-center">
+      <div class="text-2xl mb-2">📭</div>
+      <div class="text-sm text-text-2 mb-2">Активного сейфа нет</div>
+      <button class="btn btn-gold btn-shimmer btn-sm" onclick="route('open')">Открыть сейф</button>
+    </div>
+    `}
+
+    <!-- Известные кошельки -->
+    <div class="card mb-3">
+      <div class="card-h"><h2>💼 Мои кошельки</h2>
+        <button class="btn btn-sm" id="pf_add_wallet">+ Добавить</button>
+      </div>
+      <p class="text-text-2 text-xs mb-2">Кошельки которые вы использовали — с метками, чтоб не путать. Можно добавить и те, что не подключали ещё.</p>
+      <div id="pf_wallets" class="space-y-1.5"></div>
+    </div>
+
+    <!-- История сейфов -->
+    <div class="card mb-3">
+      <div class="card-h"><h2>📜 Мои сейфы</h2></div>
+      <div id="pf_vaults" class="space-y-1.5"></div>
+    </div>
+
+    <!-- Бэкап -->
+    <div class="card mb-3" style="border-color:#FF8C00">
+      <div class="card-h"><h2>💾 Бэкап</h2></div>
+      <div class="bg-bg-2 border border-warn/30 rounded-lg p-2.5 mb-2 text-xs text-warn">
+        ⚠ Если потеряете этот браузер — заметки пропадут (на сейф это не влияет, он в блокчейне). Бэкап JSON — единственный способ их сохранить.
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-sm" id="pf_export">⬇ Экспорт в JSON</button>
+        <button class="btn btn-sm" id="pf_import">⬆ Импорт из JSON</button>
+        <button class="btn btn-sm" id="pf_clear">🗑 Очистить профиль</button>
+      </div>
+    </div>
+  `;
+
+  // Список кошельков
+  const walletsBox = $('#pf_wallets');
+  const walletEntries = Object.entries(profile.wallets);
+  if(walletEntries.length === 0){
+    walletsBox.innerHTML = `<div class="text-text-3 text-xs text-center py-2">Пока пусто</div>`;
+  } else {
+    walletsBox.innerHTML = walletEntries.map(([addr, w])=>{
+      const isCurrent = addr === state.user.toLowerCase();
+      return `<div class="flex items-center gap-2 p-2 rounded bg-bg-2 border border-border text-xs">
+        <span class="${isCurrent?'text-success':'text-text-3'}">${isCurrent?'●':'○'}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold mono">${short(addr,8,6)}</div>
+          ${w.label ? `<div class="text-gold text-[11px]">${esc(w.label)}</div>` : `<div class="text-text-3 text-[11px]">метки нет</div>`}
+        </div>
+        <button class="btn btn-sm" onclick="setWalletLabel('${addr}')">✏</button>
+        <button class="btn btn-sm" onclick="removeWalletFromProfile('${addr}')">🗑</button>
+      </div>`;
+    }).join('');
+  }
+
+  // Список сейфов из истории
+  const vaultsBox = $('#pf_vaults');
+  if(profile.vaults.length === 0){
+    vaultsBox.innerHTML = `<div class="text-text-3 text-xs text-center py-2">Пока пусто</div>`;
+  } else {
+    vaultsBox.innerHTML = profile.vaults.slice().reverse().map(s=>{
+      const ownerLabel = profile.wallets[s.owner.toLowerCase()]?.label;
+      const emLabel = profile.wallets[s.emergencyAddress.toLowerCase()]?.label;
+      return `<div class="p-2 rounded bg-bg-2 border border-border text-xs">
+        <div class="flex items-center justify-between mb-1">
+          <div class="font-bold text-gold">Сейф №${s.id} · ${LEVEL_NAMES[s.level]||'?'}</div>
+          <div class="text-text-3 text-[10px]">${new Date(s.savedAt).toLocaleDateString()}</div>
+        </div>
+        <div class="text-text-2">Кошелёк: <span class="mono">${short(s.owner,6,4)}</span>${ownerLabel?` <span class="text-gold">(${esc(ownerLabel)})</span>`:''}</div>
+        <div class="text-text-2">Резервный: <span class="mono text-warn">${short(s.emergencyAddress,6,4)}</span>${emLabel?` <span class="text-gold">(${esc(emLabel)})</span>`:''}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Обработчики
+  $('#pf_set_label').onclick = ()=>setWalletLabel(state.user);
+  $('#pf_add_wallet').onclick = async ()=>{
+    const a = await inputAddressModal('Добавить кошелёк','Введите адрес кошелька, которому хотите назначить метку.','');
+    if(!a) return;
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    ensureWalletInProfile(a, profile);
+    saveProfile(profile);
+    setWalletLabel(a);
+  };
+  $('#pf_export').onclick = exportProfile;
+  $('#pf_import').onclick = importProfile;
+  $('#pf_clear').onclick = ()=>{
+    if(!confirm('Удалить ВСЕ метки и историю профиля? Сейфы в блокчейне это не затронет, но локальные подсказки пропадут.')) return;
+    localStorage.removeItem('av_profile');
+    sessionLog('Профиль очищен','info');
+    route('profile');
+  };
+}
+
+/* ==========================================================================
+   Профиль: helpers (localStorage)
+   ========================================================================== */
+function loadProfile(){
+  try{
+    const raw = localStorage.getItem('av_profile');
+    if(!raw) return {wallets:{}, vaults:[]};
+    const p = JSON.parse(raw);
+    if(!p.wallets) p.wallets = {};
+    if(!p.vaults) p.vaults = [];
+    return p;
+  }catch{return {wallets:{}, vaults:[]};}
+}
+function saveProfile(p){
+  localStorage.setItem('av_profile', JSON.stringify(p));
+}
+function ensureWalletInProfile(addr, profile){
+  const k = addr.toLowerCase();
+  if(!profile.wallets[k]) profile.wallets[k] = {label:'', firstSeen:Date.now()};
+  saveProfile(profile);
+}
+function rememberVaultInProfile(v, owner, profile){
+  const exists = profile.vaults.find(x=>x.id===Number(v.id) && x.owner.toLowerCase()===owner.toLowerCase());
+  if(exists) return;
+  profile.vaults.push({
+    id:Number(v.id), owner, emergencyAddress:v.emergencyAddress,
+    level:v.level, openedAt:Number(v.depositedAt), savedAt:Date.now()
+  });
+  ensureWalletInProfile(v.emergencyAddress, profile);
+  saveProfile(profile);
+}
+
+async function setWalletLabel(addr){
+  const profile = loadProfile();
+  const k = addr.toLowerCase();
+  const cur = profile.wallets[k]?.label || '';
+  const label = await inputAddressModal(
+    'Метка для кошелька',
+    `Адрес: <span class="mono text-xs">${esc(addr)}</span><br>Придумайте короткое имя — например «Основной», «Резервный», «Trust на айфоне».`,
+    cur
+  );
+  if(label === null) return;
+  if(!profile.wallets[k]) profile.wallets[k] = {firstSeen:Date.now()};
+  profile.wallets[k].label = label.trim().slice(0,40);
+  saveProfile(profile);
+  toast('Метка сохранена','success',1500);
+  if(state.route === 'profile') route('profile');
+}
+function removeWalletFromProfile(addr){
+  if(!confirm('Удалить этот кошелёк из профиля? (адрес останется в блокчейне, только метка исчезнет)')) return;
+  const profile = loadProfile();
+  delete profile.wallets[addr.toLowerCase()];
+  saveProfile(profile);
+  toast('Удалено','info',1500);
+  if(state.route === 'profile') route('profile');
+}
+function exportProfile(){
+  const p = loadProfile();
+  const blob = new Blob([JSON.stringify(p,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `anchorvault-profile-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Файл скачан','success',2000);
+  sessionLog('Профиль экспортирован в JSON','success');
+}
+function importProfile(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const p = JSON.parse(r.result);
+        if(typeof p !== 'object' || (!p.wallets && !p.vaults)) throw new Error('Не похоже на профиль AnchorVault');
+        if(!confirm('Заменить текущие данные профиля содержимым файла?')) return;
+        saveProfile(p);
+        toast('Профиль импортирован','success');
+        sessionLog('Профиль импортирован из файла','success');
+        if(state.route==='profile') route('profile');
+      }catch(e){toast('Не удалось прочитать: '+e.message,'error');}
+    };
+    r.readAsText(f);
+  };
+  inp.click();
 }
 
 /* ==========================================================================
