@@ -345,6 +345,7 @@
       <div class="nav-item" data-route="emergency"><span class="ico">🚨</span><span>Аварийный</span></div>
       <div class="nav-item" data-route="settings"><span class="ico">🛠</span><span>Настройки сейфа</span></div>
       <div class="nav-item" data-route="history"><span class="ico">📜</span><span>История</span></div>
+      <div class="nav-item" data-route="faq"><span class="ico">❓</span><span>Помощь и вопросы</span></div>
     </nav>
     <div class="px-3 py-3 border-t border-border text-[11px] space-y-1.5">
       <div class="flex items-center justify-between">
@@ -843,16 +844,42 @@ const ERROR_MAP = {
 };
 
 // Кэш для известных селекторов кастомных ошибок (4-byte) → имя
-const ERROR_SELECTORS = {};
+// Захардкоженные селекторы V44 — фоллбэк на случай если interface.parseError не сработает
+const ERROR_SELECTORS = {
+  '0x19c5b510':'NoEmergencySet',
+  '0x1a9f9b52':'EmergencyAlreadySet',
+  '0x9e3ba915':'WrongCode',
+  '0xa5610b05':'WeakCode',
+  '0x387fe24a':'CodeTooLong',
+  '0x80cb55e2':'NotActive',
+  '0x1d492a02':'BadVaultId',
+  '0x0f2e5b6c':'Locked',
+  '0xa8cab3d1':'Frozen',
+  '0x35f853c0':'VaultLimitReached',
+  '0x1a55ed8d':'TooManyAttempts',
+  '0x8f92fb9e':'AttemptTooSoon',
+  '0xab35696f':'ContractPaused',
+  '0x3dd1b305':'TokenNotSupported',
+  '0xc24b1b61':'DepositBelowMinimum',
+  '0x034caea8':'TransferAlreadyExists',
+  '0x466af7c8':'TransferNotPending',
+  '0xf7653731':'TransferExpired',
+  '0x27ad52ce':'TransferStillValid',
+  '0x9f31c8bf':'TransferMaxAttemptsReached',
+  '0xbf9b3e0c':'NotTransferRecipient',
+  '0x1cb2f8fb':'NotTransferSender',
+  '0x74e7ac61':'MustRotateCodesFirst',
+  '0xfa7cb423':'AntiPhishRequired',
+  '0xd92e233d':'ZeroAddress',
+  '0xe6c4247b':'InvalidAddress',
+};
 function buildSelectorCache(){
   if(!state.vault) return;
-  if(Object.keys(ERROR_SELECTORS).length) return;
   try{
     state.vault.interface.fragments.forEach(f=>{
       if(f.type==='error'){
-        // селектор = первые 4 байта keccak256 от сигнатуры
         const sig = f.format('sighash');
-        const sel = ethers.id(sig).slice(0,10); // 0x + 8 hex
+        const sel = ethers.id(sig).slice(0,10);
         ERROR_SELECTORS[sel] = f.name;
       }
     });
@@ -1814,7 +1841,8 @@ const ROUTES = {
   transfers:renderOperations,                    // legacy-alias
   emergency:renderEmergency, settings:renderSettings,
   history:renderHistory,
-  profile:renderProfile                          // личный кабинет
+  profile:renderProfile,                         // личный кабинет
+  faq:renderFaq                                  // помощь и вопросы
 };
 function route(name){
   state.route = name;
@@ -2610,10 +2638,31 @@ async function renderProtectedTransfer(host){
     if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
     if(to.toLowerCase()===state.user.toLowerCase()) return toast('Нельзя передать самому себе','warning');
     if(to.toLowerCase()===CONFIG.CONTRACT_ADDRESS.toLowerCase()) return toast('Нельзя передать контракту','warning');
+
+    // Проверка 1: у ОТПРАВИТЕЛЯ должен быть задан резервный адрес
+    try{
+      const myEm = await state.vault.getGlobalEmergency(state.user);
+      if(!myEm || myEm === ethers.ZeroAddress){
+        const r = await checkAndPromptGlobalEmergency();
+        if(!r) return toast('Сначала задайте свой резервный адрес','warning');
+      }
+    }catch{}
+
+    // Проверка 2: у ПОЛУЧАТЕЛЯ тоже должен быть задан резервный адрес
+    // (после передачи у него появится сейф, а сейф в V44 не может быть без globalEmergency)
+    try{
+      const recEm = await state.vault.getGlobalEmergency(to);
+      if(!recEm || recEm === ethers.ZeroAddress){
+        return toast('У получателя не задан резервный адрес. Он должен сначала зайти в пульт, принять условия и задать свой резервный адрес — только потом сможет принять сейф.','warning',9000);
+      }
+    }catch{}
+
+    // Проверка 3: у получателя не должно быть своего активного сейфа
     try{
       const recVid = await state.vault.activeVaultIdByToken(to, CONFIG.ANCR_ADDRESS);
-      if(recVid && recVid!==0n) return toast('У получателя уже есть активный сейф','warning');
+      if(recVid && recVid!==0n) return toast('У получателя уже есть активный сейф для этого токена','warning');
     }catch{}
+
     const code = $('#tr_code').value, anti = $('#tr_anti').value;
     const newCode = $('#trn_code').value;
     const newAnti = $('#trn_anti').value;
@@ -3133,6 +3182,20 @@ async function renderProfile(){
       <div id="pf_emergency_body"></div>
     </div>
 
+    <!-- Диагностика передачи сейфа -->
+    <div class="card mb-3" style="border-color:#5da3d5">
+      <div class="card-h"><h2>🔍 Проверка перед передачей сейфа</h2></div>
+      <p class="text-text-2 text-xs mb-2">Если при передаче сейфа возникает ошибка — проверьте здесь. Введите адрес получателя, кнопка покажет всё ли готово у вас и у него.</p>
+      <div class="space-y-2">
+        <div>
+          <label>Адрес получателя</label>
+          <input id="pf_diag_addr" class="mono" placeholder="0x…">
+        </div>
+        <button class="btn btn-sm" id="pf_diag_btn">🔍 Проверить</button>
+      </div>
+      <div id="pf_diag_result" class="mt-2"></div>
+    </div>
+
     <!-- Активный сейф -->
     ${v ? `
     <div class="card mb-3">
@@ -3295,6 +3358,71 @@ async function renderProfile(){
     sessionLog('Профиль очищен','info');
     route('profile');
   };
+
+  // Диагностика передачи сейфа
+  $('#pf_diag_btn').onclick = async ()=>{
+    const box = $('#pf_diag_result');
+    const recAddr = ($('#pf_diag_addr').value || '').trim();
+    box.innerHTML = '<div class="text-text-3 text-xs py-2">Проверяю…</div>';
+
+    const rows = [];
+    const ok = (t)=>`<div class="text-xs text-success">✓ ${t}</div>`;
+    const bad = (t)=>`<div class="text-xs text-warn">✗ ${t}</div>`;
+    const info = (t)=>`<div class="text-xs text-text-2">• ${t}</div>`;
+
+    // 1. Контракт
+    rows.push(info(`Контракт пульта: <span class="mono">${short(CONFIG.CONTRACT_ADDRESS,8,6)}</span>`));
+
+    // 2. Версия контракта — проверяем что это V44
+    try{
+      const ver = await state.vault.VERSION();
+      if(Number(ver) === 44) rows.push(ok(`Контракт отвечает: версия ${ver}`));
+      else rows.push(bad(`Версия контракта ${ver}, ожидается 44 — возможно подключён не тот контракт!`));
+    }catch(e){
+      rows.push(bad('Контракт не отвечает: ' + parseError(e)));
+    }
+
+    // 3. Твой резервный адрес
+    try{
+      const myEm = await state.vault.getGlobalEmergency(state.user);
+      if(myEm && myEm !== ethers.ZeroAddress){
+        rows.push(ok(`Ваш резервный адрес задан: <span class="mono">${short(myEm,8,6)}</span>`));
+      }else{
+        rows.push(bad('У ВАС резервный адрес НЕ задан в этом контракте. Задайте его выше.'));
+      }
+    }catch(e){
+      rows.push(bad('Не удалось проверить ваш резервный: ' + parseError(e)));
+    }
+
+    // 4. Резервный адрес получателя
+    if(recAddr && ethers.isAddress(recAddr)){
+      try{
+        const recEm = await state.vault.getGlobalEmergency(recAddr);
+        if(recEm && recEm !== ethers.ZeroAddress){
+          rows.push(ok(`У получателя резервный адрес задан: <span class="mono">${short(recEm,8,6)}</span>`));
+        }else{
+          rows.push(bad('У ПОЛУЧАТЕЛЯ резервный адрес НЕ задан. Он должен сам зайти в пульт этим кошельком, принять условия и задать резервный адрес.'));
+        }
+      }catch(e){
+        rows.push(bad('Не удалось проверить получателя: ' + parseError(e)));
+      }
+      // 5. Нет ли у получателя своего сейфа
+      try{
+        const recVid = await state.vault.activeVaultIdByToken(recAddr, CONFIG.ANCR_ADDRESS);
+        if(recVid && recVid !== 0n){
+          rows.push(bad(`У получателя уже есть активный сейф №${recVid} для ANCR — передать не получится.`));
+        }else{
+          rows.push(ok('У получателя нет своего сейфа для ANCR — место свободно.'));
+        }
+      }catch{}
+    } else if(recAddr){
+      rows.push(bad('Адрес получателя введён неверно.'));
+    } else {
+      rows.push(info('Адрес получателя не введён — проверены только ваши данные.'));
+    }
+
+    box.innerHTML = `<div class="bg-bg-2 border border-border rounded-lg p-3 space-y-1">${rows.join('')}</div>`;
+  };
 }
 
 /* ==========================================================================
@@ -3386,6 +3514,183 @@ function importProfile(){
     r.readAsText(f);
   };
   inp.click();
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Помощь и вопросы (FAQ) — аккордеон, человеческий язык
+   ========================================================================== */
+async function renderFaq(){
+  const root = $('#pageContent');
+
+  // Категории и вопросы. Всё простым языком, без машинных терминов.
+  const FAQ = [
+    {
+      cat: '🚀 Начало',
+      items: [
+        ['Что это вообще такое?',
+         'AnchorVaultCoin — это защищённое хранилище для ваших монет. Вы кладёте монеты ANCR в «сейф», и чтобы их забрать, нужны секретные фразы, которые знаете только вы. Даже если кто-то украдёт ваш кошелёк — без фраз он не достанет монеты из сейфа.'],
+        ['С чего начать новичку?',
+         'Три шага. 1) Подключите кошелёк (MetaMask). 2) Задайте резервный адрес — это запасной кошелёк на крайний случай. 3) Откройте сейф: выберите уровень защиты, придумайте фразы, положите монеты. Всё.'],
+        ['Это безопасно? Где мои монеты?',
+         'Монеты лежат в смарт-контракте в блокчейне — не у нас, не на сервере, нигде у посредников. Никто, включая создателей проекта, не может их забрать. Управляете только вы, своими фразами и кошельком.'],
+        ['Сейчас тестовая сеть — что это значит?',
+         'Пульт работает в сети Sepolia — это «песочница» блокчейна. Монеты тут ненастоящие, бесплатные, для проверки. Можно тренироваться без риска потерять реальные деньги.'],
+      ]
+    },
+    {
+      cat: '🔐 Сейфы',
+      items: [
+        ['Что такое уровни SAFE, VAULT, FORTRESS?',
+         'Это «толщина брони» вашего сейфа. SAFE — лёгкий, для небольших сумм, маленькая комиссия (0.5%). VAULT — средний, для сбережений (1.5%). FORTRESS — максимальная защита для крупных сумм (2%): три отдельные секретные фразы вместо двух.'],
+        ['Сколько фраз нужно придумать?',
+         'На SAFE и VAULT — две: основной код (для повседневных операций) и антифишинг-фраза. На FORTRESS — три: добавляется отдельный аварийный код. Чем выше уровень — тем больше independent секретов, тем надёжнее.'],
+        ['Что такое антифишинг-фраза?',
+         'Это ваша личная фраза-пароль, из которой пульт делает уникальный «отпечаток». Отпечаток виден в шапке сайта. Если вы зайдёте на поддельный сайт-двойник — отпечаток будет другой, и вы сразу поймёте что вас обманывают. Настоящий сайт всегда покажет один и тот же отпечаток.'],
+        ['Можно ли иметь несколько сейфов?',
+         'Да — по одному сейфу на каждый вид монет. Для ANCR один сейф, для другого токена — другой. Они независимы.'],
+      ]
+    },
+    {
+      cat: '🚨 Резерв и ПАНИКА',
+      items: [
+        ['Что такое резервный адрес?',
+         'Это запасной кошелёк, на который можно вывести монеты в крайнем случае — если вы забыли фразы или ваш основной кошелёк украли. Задаётся один раз при первом входе.'],
+        ['Почему резервный адрес нельзя поменять?',
+         'Это специально, ради вашей безопасности. Представьте: вор получил доступ к вашему основному кошельку. Если бы он мог поменять резервный адрес на свой — он бы увёл все монеты. Раз адрес menyat нельзя, вор бессилен: монеты уйдут только на ВАШ заранее заданный запасной кошелёк.'],
+        ['Что такое кнопка ПАНИКА?',
+         'Аварийная кнопка «спасти всё». Если вы потеряли доступ ко всему — забыли фразы, потеряли кошелёк — кнопка ПАНИКА мгновенно отправит монеты на ваш резервный адрес. Без фраз, без вопросов. Берётся небольшой штраф, но монеты спасены.'],
+        ['Какой кошелёк выбрать резервным?',
+         'Отдельный, надёжный, к которому у вас точно есть доступ. Лучше всего — кошелёк, seed-фразу которого вы записали на бумагу и спрятали. НЕ тот же кошелёк, которым пользуетесь каждый день.'],
+      ]
+    },
+    {
+      cat: '💸 Операции',
+      items: [
+        ['Чем «простой перевод» отличается от «под защитой»?',
+         'Простой перевод — обычная отправка монет с кошелька на кошелёк, быстро и без сейфа. «Под защитой» — это передача целого сейфа другому человеку: он получит сейф вместе с монетами и будет управлять им по новым фразам, которые вы ему зададите.'],
+        ['Что значит «На якоре» в шапке?',
+         '«На якоре» — это сколько ваших монет ANCR сейчас заперто в сейфе (то есть под защитой). «Свободных» — сколько просто лежит на кошельке, не в сейфе.'],
+        ['Почему берётся комиссия?',
+         'Небольшой процент идёт на работу системы: часть сжигается (уменьшает количество монет — полезно для курса), часть в резервный фонд, часть создателям. Размер зависит от операции и уровня сейфа.'],
+        ['Что такое «газ»?',
+         'Газ — это плата сети блокчейна за обработку вашей операции, оплачивается в ETH (не в ANCR). Как почтовая марка: чтобы отправить транзакцию, нужно немного ETH на кошельке. В тестовой сети ETH бесплатный.'],
+      ]
+    },
+    {
+      cat: '🛟 Проблемы',
+      items: [
+        ['Я забыл фразы от сейфа. Что делать?',
+         'Если помните хотя бы аварийный код — используйте «Аварийный вывод». Если не помните ничего — кнопка ПАНИКА вернёт монеты на резервный адрес (со штрафом, но монеты спасены). Поэтому так важно с самого начала задать резервный адрес.'],
+        ['Пишет «неверный код», хотя я уверен что правильный.',
+         'Проверьте: нет ли лишних пробелов в начале/конце, та ли раскладка клавиатуры, не перепутаны ли регистры букв. Фразы чувствительны к каждому символу. После 5 ошибок подряд сейф временно блокируется на несколько часов — это защита от подбора.'],
+        ['Что такое «метка кошелька»?',
+         'Это имя-напоминалка, которое вы сами придумываете кошельку, чтобы не путаться в адресах. Например адрес 0x186C…68b1 можно подписать «Мой основной». Метки видны только вам, хранятся в браузере, никуда не отправляются.'],
+        ['Кошелёк не подключается на телефоне.',
+         'Обычный браузер на телефоне не умеет работать с криптокошельками. Откройте сайт внутри приложения MetaMask — там есть встроенный браузер. На странице входа есть кнопка «Открыть в MetaMask».'],
+        ['Антифишинг показывает «НЕ СОВПАДАЕТ» — это опасно?',
+         'Это предупреждение. Причины: либо вы недавно меняли фразы (тогда всё нормально, подтвердите обновление), либо вы на поддельном сайте (тогда срочно закройте его и проверьте адрес сайта). Если фразы не меняли — будьте осторожны.'],
+      ]
+    },
+  ];
+
+  root.innerHTML = `
+    <div class="card mb-3">
+      <div class="card-h"><h2>❓ Помощь и частые вопросы</h2></div>
+      <p class="text-text-2 text-xs mb-3">Выберите тему, затем нажмите на вопрос чтобы раскрыть ответ.</p>
+      <!-- Маленькие кнопки-табы категорий -->
+      <div id="faq_tabs" class="faq-tabs"></div>
+    </div>
+    <div id="faq_list" class="space-y-1.5"></div>
+  `;
+
+  // Стили (один раз)
+  if(!document.getElementById('faq_styles')){
+    const st = document.createElement('style');
+    st.id = 'faq_styles';
+    st.textContent = `
+      .faq-tabs{display:flex;flex-wrap:wrap;gap:6px}
+      .faq-tab{
+        display:inline-flex;align-items:center;gap:5px;
+        background:#1a1a1a;border:1px solid #2a2a2a;border-radius:7px;
+        padding:6px 10px;font-size:11.5px;font-weight:600;color:#a0a0a0;
+        cursor:pointer;transition:.15s;font-family:inherit;white-space:nowrap;
+      }
+      .faq-tab:hover{border-color:#4a4a4a;color:#e8e8e8}
+      .faq-tab.active{background:rgba(212,175,55,.13);border-color:#D4AF37;color:#D4AF37}
+      .faq-q{
+        background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;
+        overflow:hidden;transition:.15s;
+      }
+      .faq-q:hover{border-color:#3a3a3a}
+      .faq-q.open{border-color:rgba(212,175,55,.4)}
+      .faq-q-head{
+        display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
+        font-size:12.5px;font-weight:600;color:#e8e8e8;user-select:none;
+      }
+      .faq-q-head:hover{color:#D4AF37}
+      .faq-q-mark{
+        width:18px;height:18px;min-width:18px;border-radius:5px;
+        background:#202020;border:1px solid #3a3a3a;color:#a0a0a0;
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:800;transition:.15s;
+      }
+      .faq-q.open .faq-q-mark{background:#D4AF37;color:#0f0f0f;border-color:#D4AF37}
+      .faq-q-body{
+        max-height:0;overflow:hidden;transition:max-height .25s ease;
+        font-size:12px;line-height:1.6;color:#a0a0a0;
+      }
+      .faq-q.open .faq-q-body{max-height:420px}
+      .faq-q-body-inner{padding:0 11px 11px 37px}
+    `;
+    document.head.appendChild(st);
+  }
+
+  // Кнопки-табы категорий
+  const tabsBox = $('#faq_tabs');
+  tabsBox.innerHTML = FAQ.map((g,i)=>`
+    <button type="button" class="faq-tab ${i===0?'active':''}" data-cat="${i}">${esc(g.cat)}</button>
+  `).join('');
+
+  const list = $('#faq_list');
+
+  // Рендер вопросов выбранной категории
+  function renderCat(ci){
+    const group = FAQ[ci];
+    list.innerHTML = group.items.map((qa,qi)=>`
+      <div class="faq-q" data-faq="${qi}">
+        <div class="faq-q-head">
+          <span class="faq-q-mark">+</span>
+          <span class="flex-1">${esc(qa[0])}</span>
+        </div>
+        <div class="faq-q-body"><div class="faq-q-body-inner">${esc(qa[1])}</div></div>
+      </div>
+    `).join('');
+    // раскрытие
+    $$('.faq-q', list).forEach(q=>{
+      q.querySelector('.faq-q-head').onclick = ()=>{
+        const wasOpen = q.classList.contains('open');
+        $$('.faq-q', list).forEach(o=>{
+          o.classList.remove('open');
+          o.querySelector('.faq-q-mark').textContent = '+';
+        });
+        if(!wasOpen){
+          q.classList.add('open');
+          q.querySelector('.faq-q-mark').textContent = '−';
+        }
+      };
+    });
+  }
+
+  // Переключение табов
+  $$('#faq_tabs button').forEach(b=>{
+    b.onclick = ()=>{
+      $$('#faq_tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderCat(Number(b.dataset.cat));
+    };
+  });
+
+  renderCat(0);
 }
 
 /* ==========================================================================
