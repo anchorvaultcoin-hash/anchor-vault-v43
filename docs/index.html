@@ -2621,6 +2621,12 @@ async function renderProtectedTransfer(host){
       <div class="card-h"><h2 class="text-sm">Ваши текущие фразы (подтверждение)</h2></div>
       ${codeField('tr_code','🔑 Ваш основной код','Подтверждение операции.')}
       ${codeField('tr_anti','🛡 Ваша антифишинг-фраза','Подтверждение операции.')}
+      <div class="bg-bg-2 border border-info/30 rounded-lg p-2.5 mb-3 text-xs" style="border-color:rgba(93,163,213,.3)">
+        <div class="text-info mb-1">💡 Перед передачей проверьте антифишинг-фразу</div>
+        <div class="text-text-2 mb-2">Кнопка сверит вашу антифишинг-фразу с сейфом без транзакции и без комиссии. Так вы убедитесь что фраза введена верно.</div>
+        <button type="button" class="btn btn-sm" id="tr_check">🔍 Проверить антифишинг</button>
+        <div id="tr_check_result" class="mt-2"></div>
+      </div>
       <div class="card-h"><h2 class="text-sm">Новые фразы для получателя</h2></div>
       ${codeField('trn_code','🔑 Новый основной код','Длина 10–64.')}
       ${codeField('trn_anti','🛡 Новая антифишинг-фраза', isLite
@@ -2632,6 +2638,59 @@ async function renderProtectedTransfer(host){
   `;
   bindEyes(host);
   bindTipsFocus(host);
+
+  // Проверка фразы на скрытые проблемы (пробелы, не-ASCII символы, не те цифры)
+  $('#tr_check').onclick = ()=>{
+    const box = $('#tr_check_result');
+    const code = $('#tr_code').value;
+    const anti = $('#tr_anti').value;
+    const issues = [];
+
+    function analyze(label, val){
+      if(!val){ issues.push(`<div class="text-warn text-xs">✗ ${label}: пусто</div>`); return; }
+      const probs = [];
+      // Пробелы по краям
+      if(val !== val.trim()) probs.push('есть пробел в начале или конце');
+      // Пробелы внутри
+      if(/\s/.test(val.trim())) probs.push('есть пробел внутри');
+      // Не-ASCII символы (всё что выше кода 127 — кириллица, арабские цифры и т.п.)
+      const nonAscii = [...val].filter(ch=>ch.charCodeAt(0)>127);
+      if(nonAscii.length){
+        const list = nonAscii.map(ch=>`«${ch}» (код ${ch.charCodeAt(0)})`).join(', ');
+        probs.push(`не-латинские символы: ${list}`);
+      }
+      // Невидимые символы (zero-width и т.п.)
+      if(/[\u200B-\u200D\uFEFF\u00A0]/.test(val)) probs.push('невидимые символы');
+      // Длина
+      const bytes = new TextEncoder().encode(val).length;
+      if(bytes < 10) probs.push(`коротковато (${bytes} символов, нужно 10+)`);
+
+      if(probs.length){
+        issues.push(`<div class="text-warn text-xs">✗ ${label}: ${probs.join('; ')}</div>`);
+      } else {
+        issues.push(`<div class="text-success text-xs">✓ ${label}: длина ${bytes}, символы чистые</div>`);
+      }
+      // Показываем что именно введено посимвольно
+      const dump = [...val].map(ch=>{
+        const c = ch.charCodeAt(0);
+        return c>127||c<32 ? `[${c}]` : ch;
+      }).join('');
+      issues.push(`<div class="text-text-3 text-[10px] mono pl-3">введено: ${esc(dump)}</div>`);
+    }
+
+    analyze('Основной код', code);
+    analyze('Антифишинг', anti);
+
+    const allClean = !issues.some(s=>s.includes('✗'));
+    box.innerHTML = `<div class="bg-bg-2 border ${allClean?'border-success/30':'border-warn/40'} rounded p-2 space-y-0.5">
+      ${issues.join('')}
+      <div class="text-xs ${allClean?'text-success':'text-warn'} mt-1 pt-1 border-t border-border">
+        ${allClean
+          ? 'Символы выглядят чисто. Если контракт всё равно говорит «неверный код» — значит фраза не совпадает с той, что вы вводили при открытии сейфа.'
+          : 'Найдены проблемы — исправьте поля. Скорее всего из-за этого «неверный код».'}
+      </div>
+    </div>`;
+  };
 
   $('#tr_submit').onclick = async ()=>{
     const to = $('#tr_to').value.trim();
