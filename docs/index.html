@@ -439,7 +439,7 @@
 </div>
 
 <!-- Loading overlay -->
-<div id="loadingOverlay" class="hidden fixed inset-0 z-[150] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
+<div id="loadingOverlay" class="hidden fixed inset-0 z-[155] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4">
   <div class="card max-w-md w-full text-center" style="border-color:#D4AF37">
     <div class="mb-3"><span class="spinner" style="width:32px;height:32px;color:#D4AF37"></span></div>
     <div id="loadTitle" class="font-bold mb-1 text-gold">Подтвердите в кошельке…</div>
@@ -449,7 +449,7 @@
 </div>
 
 <!-- Generic modal -->
-<div id="modal" class="hidden fixed inset-0 z-[140] bg-black/70 flex items-center justify-center px-4">
+<div id="modal" class="hidden fixed inset-0 z-[152] bg-black/75 flex items-center justify-center px-4">
   <div class="card max-w-md w-full" style="border-color:#D4AF37">
     <div id="modalTitle" class="text-base font-bold mb-2 text-gold"></div>
     <div id="modalBody" class="text-sm text-text-2 mb-4"></div>
@@ -1066,12 +1066,18 @@ function confirmModal(title, body){
   return new Promise(resolve=>{
     $('#modalTitle').textContent = title;
     $('#modalBody').innerHTML = body;
+    $('#modalOk').textContent = 'Продолжить';   // сброс текста (мог измениться в inputAddressModal)
     $('#modal').classList.remove('hidden');
     document.body.classList.add('modal-open');
     const close = v=>{
       $('#modal').classList.add('hidden');
-      document.body.classList.remove('modal-open');
       $('#modalOk').onclick=null; $('#modalCancel').onclick=null;
+      $('#modalInput') && $('#modalInput').remove?.();
+      // Снимаем modal-open только если не открыт другой модал (onboarding/tos/apBad)
+      const otherOpen = ['#geModal','#tosModal','#apBad'].some(id=>{
+        const el = $(id); return el && !el.classList.contains('hidden');
+      });
+      if(!otherOpen) document.body.classList.remove('modal-open');
       resolve(v);
     };
     $('#modalOk').onclick = ()=>close(true);
@@ -3225,9 +3231,17 @@ async function renderProfile(){
     try{
       const em = await state.vault.getGlobalEmergency(state.user);
       state.globalEmergency = em;
-    }catch{}
+    }catch(e){
+      sessionLog('Не удалось прочитать резервный адрес: '+parseError(e),'warning');
+    }
   }
+  // Перечитываем элемент ПОСЛЕ await — за время запроса DOM мог перерисоваться.
+  // Если пользователь уже ушёл с этой страницы — emBox будет null, просто выходим.
   const emBox = $('#pf_emergency_body');
+  if(!emBox){
+    // Страница уже не profile — ничего не делаем
+    return;
+  }
   if(state.globalEmergency && state.globalEmergency !== ethers.ZeroAddress){
     const em = state.globalEmergency;
     const emLabel = profile.wallets[em.toLowerCase()]?.label || '';
@@ -3246,7 +3260,6 @@ async function renderProfile(){
       </div>
       <div class="hint mt-2">⚠ Этот адрес зафиксирован в контракте и поменять его невозможно. Если потеряете к нему доступ — потеряете последнюю линию защиты.</div>
     `;
-    // Ensure wallet known in local profile
     ensureWalletInProfile(em, profile);
   } else {
     emBox.innerHTML = `
