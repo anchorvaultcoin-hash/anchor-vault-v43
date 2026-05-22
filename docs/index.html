@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>AnchorVault V44 — пульт управления</title>
+<title>AnchorVaultCoin V44 — пульт управления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -333,8 +333,9 @@
     <div class="px-4 py-4 border-b border-border flex items-center gap-3">
       <div id="sidebarLogo" class="shrink-0"></div>
       <div>
-        <div class="font-bold text-sm tracking-wide">ANCHORVAULT</div>
-        <div class="text-[10px] text-gold mono font-semibold">V44 · Sepolia</div>
+        <div class="font-bold text-sm tracking-wide leading-tight">ANCHORVAULT<span class="text-gold">COIN</span></div>
+        <div class="text-[10px] text-text-3 font-semibold leading-tight">пульт · ANCR на Sepolia</div>
+        <div class="text-[10px] text-gold mono font-semibold mt-0.5">V44</div>
       </div>
     </div>
     <nav class="flex-1 px-2 py-3 overflow-y-auto space-y-0.5" id="navMenu">
@@ -372,7 +373,7 @@
       <div class="flex-1 min-w-0 flex items-center gap-2">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <span class="text-text-3">Контракт V44</span>
+            <span class="text-text-3">Хранилище <span class="text-text">AnchorVault V44</span></span>
             <span id="hAntiphishBadge" class="hAp-badge hidden" title="">
               <span id="hAntiphishIco">🛡</span>
               <span id="hAntiphishHex" class="mono">—</span>
@@ -412,7 +413,7 @@
     <div id="pageContent" class="flex-1 p-4 md:p-6 max-w-3xl w-full mx-auto"></div>
 
     <footer class="border-t border-border px-4 py-3 text-[11px] text-text-3 flex items-center justify-between flex-wrap gap-2">
-      <span>AnchorVault · V44 testnet · все суммы фейковые</span>
+      <span>AnchorVaultCoin V44 · хранилище AnchorVault на Sepolia · все суммы фейковые</span>
       <span id="footApFull" class="mono"></span>
     </footer>
   </main>
@@ -462,13 +463,14 @@
 <!-- TOS modal -->
 <div id="tosModal" class="hidden fixed inset-0 z-[145] bg-black/80 flex items-center justify-center px-4">
   <div class="card max-w-lg w-full" style="border-color:#D4AF37">
-    <div class="text-lg font-bold mb-3 text-gold">Перед началом работы</div>
+    <div class="text-lg font-bold mb-1 text-gold">Добро пожаловать в AnchorVaultCoin</div>
+    <div class="text-xs text-text-3 mb-3">Пульт управления хранилищем <b>AnchorVault</b> и монетой <b>AnchorCoin (ANCR)</b></div>
     <ul class="text-sm text-text-2 space-y-2 mb-4 list-disc pl-5">
-      <li>Сейчас вы в <b>тестовой сети Sepolia</b>. Эти токены — игрушечные, реальной ценности нет.</li>
-      <li>Запомните или сохраните <b>все 3 фразы</b>. Без них сейф откроется только аварийным выводом с штрафом.</li>
-      <li>Пульт показывает <b>антифишинг-фразу</b> при каждом входе. Если она изменилась — закройте сайт и проверьте URL.</li>
-      <li>Аварийный код храните отдельно от основного. Это последняя защита.</li>
-      <li>Все операции — мгновенные, ожидания 7 дней нет. Будьте внимательны при подтверждении.</li>
+      <li>Сейчас вы в <b>тестовой сети Sepolia</b>. Монеты <b>ANCR</b> здесь игрушечные, реальной ценности нет.</li>
+      <li>Хранилище <b>AnchorVault</b> защищает ваши средства фразами-кодами. Запомните или сохраните <b>все фразы</b> своего сейфа — без них доступ только через аварийный вывод со штрафом.</li>
+      <li>Пульт показывает <b>антифишинг-отпечаток в шапке</b>. Если он изменился — закройте сайт и проверьте URL.</li>
+      <li>Сразу после согласия пульт попросит указать <b>резервный адрес</b> — он ставится <b>раз и навсегда</b>, на него уйдут средства при панике.</li>
+      <li>Все операции — мгновенные. Будьте внимательны при подтверждении в кошельке.</li>
     </ul>
     <label class="flex items-center gap-2 text-sm normal-case font-normal mb-3" style="text-transform:none;letter-spacing:0;font-size:13px;color:#e8e8e8">
       <input type="checkbox" id="tosCheck" class="w-auto" style="width:auto"> Я ознакомился и принимаю риски
@@ -650,7 +652,9 @@ function anchorLogoSvg(size = 48){
 }
 
 /* SVG-иконка ANCR для wallet_watchAsset (тот же логотип, но в base64) */
-const ANCR_ICON_SVG = `data:image/svg+xml;base64,${btoa(anchorLogoSvg(128).replace(/\s+/g,' '))}`;
+/* SVG-иконка ANCR для wallet_watchAsset.
+   Используем URL-encoded data-URI вместо base64 — btoa() падает на не-Latin1 символах. */
+const ANCR_ICON_SVG = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(anchorLogoSvg(128));
 
 /* ==========================================================================
    ABI V44 — мультитокен, globalEmergency, panicWithdraw, secureTransfer
@@ -1833,7 +1837,8 @@ async function renderHome(){
     root.innerHTML = `
       <div class="card text-center py-10" style="border-color:#D4AF37">
         <div class="mb-4 flex justify-center">${anchorLogoSvg(110)}</div>
-        <h1 class="text-xl font-bold mb-1 text-gold">AnchorVault V44</h1>
+        <h1 class="text-xl font-bold mb-1 text-gold">AnchorVaultCoin V44</h1>
+        <p class="text-text-2 mb-1 text-xs">Пульт управления хранилищем <b class="text-gold">AnchorVault</b> и монетой <b class="text-gold">AnchorCoin (ANCR)</b></p>
         <p class="text-text-2 mb-5 text-sm">Подключите кошелёк, чтобы начать.<br>Сеть — Sepolia (тестовая).</p>
         ${isMobileNoEth ? `
           <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs text-warn text-left">
