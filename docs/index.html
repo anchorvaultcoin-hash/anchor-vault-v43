@@ -68,6 +68,7 @@
     -webkit-user-select:none;user-select:none
   }
   .tip:hover,.tip:focus{background:#D4AF37;color:#0f0f0f;border-color:#D4AF37;outline:none}
+  /* Десктопный тултип — всплывает над кружком */
   .tip::after{
     content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;
     transform:translateX(-50%);background:#1a1a1a;color:#e8e8e8;
@@ -77,8 +78,38 @@
     transition:opacity 150ms;box-shadow:0 12px 32px rgba(0,0,0,.7);z-index:200;line-height:1.4
   }
   .tip:hover::after,.tip:focus::after{opacity:1}
-  @media (max-width:600px){.tip::after{left:auto;right:0;transform:none;max-width:calc(100vw - 60px)}}
+  /* На мобильном CSS-тултип отключаем — вместо него JS-плашка снизу экрана */
+  @media (max-width:640px){
+    .tip::after{display:none}
+  }
   @media (max-width:480px){.tip{width:22px;height:22px;font-size:11px}}
+
+  /* Мобильная плашка-подсказка снизу экрана — не вылезает за край */
+  #tipSheet{
+    position:fixed;left:8px;right:8px;bottom:8px;z-index:210;
+    background:#1a1a1a;border:1px solid rgba(212,175,55,.5);
+    border-radius:12px;padding:14px 16px 16px;
+    box-shadow:0 -8px 32px rgba(0,0,0,.8);
+    transform:translateY(140%);transition:transform .22s ease;
+    max-height:60vh;overflow-y:auto;
+  }
+  #tipSheet.show{transform:translateY(0)}
+  #tipSheet .tipSheet-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:8px;
+  }
+  #tipSheet .tipSheet-title{font-size:12px;font-weight:700;color:#D4AF37;letter-spacing:.03em}
+  #tipSheet .tipSheet-close{
+    width:26px;height:26px;border-radius:50%;border:1px solid #3a3a3a;
+    background:#202020;color:#a0a0a0;font-size:13px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  #tipSheet .tipSheet-body{font-size:13px;line-height:1.55;color:#e8e8e8}
+  #tipSheetBackdrop{
+    position:fixed;inset:0;z-index:209;background:rgba(0,0,0,.4);
+    opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  #tipSheetBackdrop.show{opacity:1;pointer-events:auto}
 
   /* sidebar slide на мобиле */
   @media (max-width:767px){
@@ -422,6 +453,16 @@
 
 <!-- Toast container поверх лог-окна -->
 <div id="toastBox" class="fixed right-4 z-[100] flex flex-col gap-2 max-w-sm w-[calc(100vw-32px)] sm:w-auto"></div>
+
+<!-- Мобильная плашка-подсказка (для тултипов на телефоне) -->
+<div id="tipSheetBackdrop"></div>
+<div id="tipSheet">
+  <div class="tipSheet-head">
+    <span class="tipSheet-title">💡 Подсказка</span>
+    <button class="tipSheet-close" id="tipSheetClose">✕</button>
+  </div>
+  <div class="tipSheet-body" id="tipSheetBody"></div>
+</div>
 
 <!-- Плавающий журнал сессии -->
 <div id="logBox" class="fixed bottom-4 right-4 z-[95] bg-panel border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col">
@@ -1056,10 +1097,31 @@ function toggleLog(){
   tog.textContent = box.classList.contains('compact') ? '+' : '−';
 }
 
-/* Делаем tooltip-кружки фокусируемыми → подсказка по тапу на тач-устройствах */
+/* Мобильная плашка-подсказка */
+function showTipSheet(text){
+  $('#tipSheetBody').textContent = text;
+  $('#tipSheet').classList.add('show');
+  $('#tipSheetBackdrop').classList.add('show');
+}
+function hideTipSheet(){
+  $('#tipSheet').classList.remove('show');
+  $('#tipSheetBackdrop').classList.remove('show');
+}
+
+/* Делаем tooltip-кружки фокусируемыми (десктоп) + тап открывает плашку (мобильный) */
 function bindTipsFocus(scope=document){
+  const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
   $$('.tip',scope).forEach(el=>{
     if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+    if(isMobile && !el.dataset.tipBound){
+      el.dataset.tipBound = '1';
+      el.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const txt = el.getAttribute('data-tip') || '';
+        if(txt) showTipSheet(txt);
+      });
+    }
   });
 }
 
@@ -2754,95 +2816,226 @@ async function renderEmergency(){
     return;
   }
   const v = await readVault(state.user, state.activeVid);
-
-  const isLite = v.level !== 2; // SAFE/VAULT — recovery = antiPhrase
+  const isLite = v.level !== 2;
   const recLabel = isLite ? '🛡 Антифишинг-фраза' : '🚨 Аварийный код';
   const recTip = isLite
     ? `На уровне ${LEVEL_NAMES[v.level]} аварийная роль совпадает с антифишинг-фразой. Введите её.`
     : 'Длина 10–64. Та самая аварийная фраза, заданная при открытии сейфа.';
 
+  let mode = localStorage.getItem('av_tab_emergency') || 'panic';
+
   root.innerHTML = `
     ${vaultReminderCard(v)}
     ${failCountBanner(v)}
-
-    <div class="card mb-4" style="border-color:#FF8C00">
-      <div class="card-h"><h2>🚨 Аварийные операции</h2></div>
-      <p class="text-sm text-text-2 mb-3">
-        Используйте, только если потеряли основной код или скомпрометирован основной кошелёк.
-        Все три варианта <b>мгновенные</b>, со штрафом — но без ожиданий и таймлоков.
-      </p>
-      <div class="bg-bg-2 border rounded-lg p-3 text-xs text-warn" style="border-color:rgba(255,140,0,.4)">
-        ⚠ <b>Контракт V44 требует код для любого вывода</b>, в том числе на резервный адрес.
-        ${isLite
-          ? `На уровне <b>${LEVEL_NAMES[v.level]}</b> аварийный код = антифишинг-фраза, заданная при открытии сейфа.`
-          : `Аварийный код — третья отдельная фраза, заданная при открытии сейфа.`}
-        Если вы её совсем не помните — попробуйте ввести варианты, но осторожно: после 5 ошибок подряд сейф блокируется на 1–12 часов. В <b>V44</b> планируется кнопка «вернуть в резерв» без кодов — потребует подключить именно резервный кошелёк.
+    <div class="card" style="border-color:#FF8C00">
+      <div class="card-h"><h2>🆘 Аварийные действия</h2>
+        <span class="text-[11px] text-text-3">сейф №${v.id}</span>
       </div>
-    </div>
-
-    <div class="space-y-4">
-
-      <!-- 1. На свой адрес -->
-      <div class="card">
-        <div class="card-h"><h2>Закрыть досрочно</h2><span class="badge badge-warn">штраф 5%</span></div>
-        <p class="text-text-2 text-xs mb-3">Сейф закроется, средства вернутся на ваш текущий кошелёк. Минимум 14 дней с момента депозита.</p>
-        ${codeField('ec_rec', recLabel, recTip)}
-        <button class="btn btn-warn w-full mt-3" id="ec_submit">Закрыть досрочно (−5%)</button>
+      <p class="text-text-2 text-xs mb-3">Выберите действие. Каждое — на свой случай. Все операции мгновенные.</p>
+      <div class="em-tabs" id="em_tabs">
+        <button type="button" class="em-tab" data-mode="panic">
+          <span class="em-tab-ico">🆘</span>
+          <span class="em-tab-t">ПАНИКА</span>
+          <span class="em-tab-s">потерял всё</span>
+        </button>
+        <button type="button" class="em-tab" data-mode="reserve">
+          <span class="em-tab-ico">📮</span>
+          <span class="em-tab-t">В резерв</span>
+          <span class="em-tab-s">по аварийной фразе</span>
+        </button>
+        <button type="button" class="em-tab" data-mode="early">
+          <span class="em-tab-ico">🔓</span>
+          <span class="em-tab-t">Закрыть</span>
+          <span class="em-tab-s">себе досрочно</span>
+        </button>
+        <button type="button" class="em-tab" data-mode="any">
+          <span class="em-tab-ico">➡</span>
+          <span class="em-tab-t">На другой</span>
+          <span class="em-tab-s">на новый адрес</span>
+        </button>
       </div>
-
-      <!-- 2. На резервный -->
-      <div class="card">
-        <div class="card-h"><h2>Восстановить в резерв</h2><span class="badge badge-warn">штраф 10%</span></div>
-        <p class="text-text-2 text-xs mb-3">Средства уйдут на резервный адрес, заданный при открытии: <b class="mono">${short(v.emergencyAddress,8,6)}</b>. Сейф закроется навсегда.</p>
-        ${codeField('rs_rec', recLabel, recTip)}
-        <button class="btn btn-warn w-full mt-3" id="rs_submit">Восстановить в резерв (−10%)</button>
-      </div>
-
-      <!-- 3. На любой адрес -->
-      <div class="card" style="border-color:#FF8C00">
-        <div class="card-h"><h2>🚨 Аварийный вывод на любой адрес</h2><span class="badge badge-warn">штраф 15%</span></div>
-        <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs text-warn">
-          ⚠ <b>Максимальный штраф.</b> Используйте, только если и основной, и резервный кошельки скомпрометированы.
-          Это последняя линия защиты — средства можно отправить на новый, безопасный адрес.
-        </div>
-        <div class="space-y-3">
-          <div>
-            <label>Куда отправить<span class="req">*</span><span class="tip" data-tip="Адрес нового, безопасного кошелька. Не вашего скомпрометированного.">?</span></label>
-            <input id="ea_to" class="mono" placeholder="0x…">
-          </div>
-          ${codeField('ea_rec', recLabel, recTip)}
-          ${codeField('ea_anti','🛡 Антифишинг-фраза', isLite
-            ? `Введите её ещё раз — на ${LEVEL_NAMES[v.level]} аварийный код и антифишинг — одна и та же фраза.`
-            : 'Дополнительное подтверждение, отдельная от аварийного кода фраза.')}
-          <button class="btn btn-warn w-full" id="ea_submit">АВАРИЙНЫЙ ВЫВОД (−15%)</button>
-        </div>
-      </div>
-
+      <div id="em_content" class="mt-4"></div>
     </div>
   `;
-  bindEyes(root);
-  $('#ec_submit').onclick = async ()=>{
-    const ok = await confirmModal('Закрыть сейф досрочно?','Средства вернутся вам со штрафом 5%. Сейф закроется.');
-    if(!ok) return;
-    const rc = await txCall('Досрочное закрытие', state.vault.earlyClose(state.activeVid, $('#ec_rec').value));
-    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
-  };
-  $('#rs_submit').onclick = async ()=>{
-    const ok = await confirmModal('Восстановить в резерв?',`Средства уйдут на ${short(v.emergencyAddress,8,6)} со штрафом 10%. Сейф закроется навсегда.`);
-    if(!ok) return;
-    const rc = await txCall('Восстановление в резерв', state.vault.recoverToSafe(state.activeVid, $('#rs_rec').value));
-    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
-  };
-  $('#ea_submit').onclick = async ()=>{
-    const to = $('#ea_to').value.trim();
-    if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
-    const ok = await confirmModal('Аварийный вывод?',`
-      <div>На: <span class="mono text-xs">${esc(to)}</span></div>
-      <div class="text-warn text-xs mt-2">⚠ Штраф 15%. Используйте только если другие адреса скомпрометированы.</div>`);
-    if(!ok) return;
-    const rc = await txCall('Аварийный вывод на любой адрес', state.vault.emergencyWithdrawToAny(state.activeVid, to, $('#ea_rec').value, $('#ea_anti').value));
-    if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
-  };
+
+  // Стили табов (один раз)
+  if(!document.getElementById('em_tabs_styles')){
+    const st = document.createElement('style');
+    st.id = 'em_tabs_styles';
+    st.textContent = `
+      .em-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+      @media(min-width:560px){.em-tabs{grid-template-columns:repeat(4,1fr)}}
+      .em-tab{
+        display:flex;flex-direction:column;align-items:center;gap:2px;
+        background:#1a1a1a;border:1px solid #3a3a3a;border-radius:9px;
+        padding:9px 6px;cursor:pointer;transition:.15s;font-family:inherit;color:#a0a0a0;
+      }
+      .em-tab:hover{border-color:#5a5a5a;transform:translateY(-1px)}
+      .em-tab-ico{font-size:18px;line-height:1}
+      .em-tab-t{font-size:11.5px;font-weight:800;letter-spacing:.03em;color:#e8e8e8}
+      .em-tab-s{font-size:9px;color:#6a6a6a}
+      .em-tab.active{background:rgba(255,140,0,.13);border-color:#FF8C00}
+      .em-tab.active .em-tab-t{color:#FF8C00}
+      .em-tab[data-mode="panic"].active{
+        background:linear-gradient(135deg,rgba(255,140,0,.25),rgba(255,80,0,.15));
+        box-shadow:0 0 14px rgba(255,140,0,.25);
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  $$('#em_tabs button').forEach(b=>{
+    b.onclick = ()=>{
+      mode = b.dataset.mode;
+      localStorage.setItem('av_tab_emergency', mode);
+      $$('#em_tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderEmMode();
+    };
+  });
+  $$('#em_tabs button').forEach(b=>{ if(b.dataset.mode===mode) b.classList.add('active'); });
+
+  function renderEmMode(){
+    const c = $('#em_content');
+    if(mode === 'panic')        c.innerHTML = panicTab();
+    else if(mode === 'reserve') c.innerHTML = reserveTab();
+    else if(mode === 'early')   c.innerHTML = earlyTab();
+    else                        c.innerHTML = anyTab();
+    bindEyes(c);
+    bindTipsFocus(c);
+    bindEmHandlers();
+  }
+
+  // ===== Контент табов =====
+
+  function panicTab(){
+    return `
+      <div class="bg-bg-2 border rounded-lg p-3 mb-3 text-xs" style="border-color:rgba(255,140,0,.5)">
+        <div class="text-warn font-bold mb-1 text-sm">🆘 Кнопка «Я потерял всё»</div>
+        <div class="text-text-2 space-y-1.5">
+          <div>Это спасательная кнопка на самый крайний случай. Нажмите её, если:</div>
+          <div>• забыли все фразы от сейфа</div>
+          <div>• потеряли доступ к основному кошельку</div>
+          <div>• подозреваете что кошелёк взломан</div>
+          <div class="mt-2">Средства <b class="text-warn">мгновенно</b> уйдут на ваш резервный адрес. <b>Никакие коды и фразы не нужны.</b></div>
+        </div>
+      </div>
+      <div class="space-y-2 text-xs mb-3">
+        <div class="flex justify-between"><span class="text-text-3">Сейф №</span><span class="mono">${v.id}</span></div>
+        <div class="flex justify-between"><span class="text-text-3">В сейфе</span><span class="mono text-gold">${trim(fmtU(v.amount,v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</span></div>
+        <div class="flex justify-between"><span class="text-text-3">Резервный адрес</span><span class="mono text-warn">${short(v.emergencyAddress,8,6)}</span></div>
+        <div class="flex justify-between"><span class="text-text-3">Комиссия сервиса</span><span class="mono text-warn">20%</span></div>
+        <div class="flex justify-between border-t border-border pt-2"><span class="text-text-3">Вы получите примерно</span><span class="mono text-success">${trim(fmtU(v.amount * 80n / 100n, v.tokenMeta.decimals),6)} ${esc(v.tokenMeta.symbol)}</span></div>
+      </div>
+      <div class="bg-bg-2 border border-border rounded-lg p-2.5 mb-3 text-[11px] text-text-3">
+        💡 Комиссия сервиса 20% — плата за экстренную операцию без проверки кодов. Это дороже обычного вывода, но спасает средства когда другого пути нет. Работает даже если сейф заблокирован.
+      </div>
+      <button class="btn btn-warn w-full" id="panic_submit">🆘 ПАНИКА — спасти средства на резерв</button>
+    `;
+  }
+
+  function reserveTab(){
+    return `
+      <div class="bg-bg-2 border border-border rounded-lg p-3 mb-3 text-xs text-text-2">
+        Средства уйдут на ваш резервный адрес <b class="mono">${short(v.emergencyAddress,8,6)}</b>. Сейф закроется. Нужна <b>${isLite?'антифишинг-фраза':'аварийная фраза'}</b>.
+      </div>
+      <div class="flex justify-between text-xs mb-3"><span class="text-text-3">Комиссия сервиса</span><span class="mono text-warn">10%</span></div>
+      ${codeField('rs_rec', recLabel, recTip)}
+      <button class="btn btn-warn w-full mt-3" id="rs_submit">📮 Восстановить в резерв</button>
+    `;
+  }
+
+  function earlyTab(){
+    return `
+      <div class="bg-bg-2 border border-border rounded-lg p-3 mb-3 text-xs text-text-2">
+        Сейф закроется, средства вернутся на ваш текущий кошелёк <b class="mono">${short(state.user,8,6)}</b>. Нужна <b>${isLite?'антифишинг-фраза':'аварийная фраза'}</b>.
+      </div>
+      <div class="flex justify-between text-xs mb-3"><span class="text-text-3">Комиссия сервиса</span><span class="mono text-warn">5%</span></div>
+      ${codeField('ec_rec', recLabel, recTip)}
+      <button class="btn btn-warn w-full mt-3" id="ec_submit">🔓 Закрыть досрочно</button>
+    `;
+  }
+
+  function anyTab(){
+    return `
+      <div class="bg-bg-2 border border-warn/40 rounded-lg p-3 mb-3 text-xs text-warn">
+        ⚠ Используйте только если и основной, и резервный кошельки скомпрометированы. Средства можно отправить на новый безопасный адрес. Нужны обе фразы.
+      </div>
+      <div class="flex justify-between text-xs mb-3"><span class="text-text-3">Комиссия сервиса</span><span class="mono text-warn">15%</span></div>
+      <div class="space-y-3">
+        <div>
+          <label>Куда отправить<span class="req">*</span><span class="tip" data-tip="Адрес нового безопасного кошелька. Не вашего скомпрометированного.">?</span></label>
+          <input id="ea_to" class="mono" placeholder="0x…">
+        </div>
+        ${codeField('ea_rec', recLabel, recTip)}
+        ${codeField('ea_anti','🛡 Антифишинг-фраза', isLite
+          ? `Введите её ещё раз — на ${LEVEL_NAMES[v.level]} аварийный код и антифишинг это одна фраза.`
+          : 'Дополнительное подтверждение, отдельная от аварийного кода фраза.')}
+        <button class="btn btn-warn w-full" id="ea_submit">➡ Аварийный вывод на другой адрес</button>
+      </div>
+    `;
+  }
+
+  // ===== Обработчики =====
+  function bindEmHandlers(){
+    const panic = $('#panic_submit');
+    if(panic) panic.onclick = async ()=>{
+      // Тройное подтверждение
+      const ok1 = await confirmModal('🆘 Кнопка ПАНИКА',`
+        <div class="text-warn space-y-2">
+          <div><b>Вы собираетесь экстренно закрыть сейф №${v.id}.</b></div>
+          <div>Средства уйдут на резервный адрес <span class="mono">${short(v.emergencyAddress,6,4)}</span>.</div>
+          <div>Комиссия сервиса — <b>20%</b>. Вы получите примерно <b>${trim(fmtU(v.amount*80n/100n,v.tokenMeta.decimals),4)} ${esc(v.tokenMeta.symbol)}</b>.</div>
+          <div class="text-text-2 text-xs mt-2">Используйте только если потеряли доступ ко всему остальному.</div>
+        </div>`);
+      if(!ok1) return;
+      // Второй шаг — ввод слова
+      const word = await inputAddressModal('Подтверждение',
+        'Чтобы подтвердить, введите слово <b>ПАНИКА</b> заглавными буквами:', '');
+      if(word === null) return;
+      if(word.trim().toUpperCase() !== 'ПАНИКА' && word.trim().toUpperCase() !== 'PANIC'){
+        return toast('Слово не совпадает — операция отменена','warning');
+      }
+      // Третий шаг — сама транзакция (MetaMask)
+      const rc = await txCall('ПАНИКА — экстренный вывод', state.vault.panicWithdraw(state.activeVid));
+      if(rc){
+        state.activeVid=0n;
+        await refreshMetrics();
+        toast('Средства отправлены на резервный адрес','success');
+        route('home');
+      }
+    };
+
+    const ec = $('#ec_submit');
+    if(ec) ec.onclick = async ()=>{
+      const ok = await confirmModal('Закрыть сейф досрочно?','Средства вернутся вам. Комиссия сервиса 5%. Сейф закроется.');
+      if(!ok) return;
+      const rc = await txCall('Досрочное закрытие', state.vault.earlyClose(state.activeVid, $('#ec_rec').value));
+      if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+    };
+
+    const rs = $('#rs_submit');
+    if(rs) rs.onclick = async ()=>{
+      const ok = await confirmModal('Восстановить в резерв?',`Средства уйдут на ${short(v.emergencyAddress,8,6)}. Комиссия сервиса 10%. Сейф закроется навсегда.`);
+      if(!ok) return;
+      const rc = await txCall('Восстановление в резерв', state.vault.recoverToSafe(state.activeVid, $('#rs_rec').value));
+      if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+    };
+
+    const ea = $('#ea_submit');
+    if(ea) ea.onclick = async ()=>{
+      const to = $('#ea_to').value.trim();
+      if(!ethers.isAddress(to)) return toast('Неверный адрес','warning');
+      const ok = await confirmModal('Аварийный вывод?',`
+        <div>На: <span class="mono text-xs">${esc(to)}</span></div>
+        <div class="text-warn text-xs mt-2">Комиссия сервиса 15%. Используйте только если другие адреса скомпрометированы.</div>`);
+      if(!ok) return;
+      const rc = await txCall('Аварийный вывод на другой адрес', state.vault.emergencyWithdrawToAny(state.activeVid, to, $('#ea_rec').value, $('#ea_anti').value));
+      if(rc){state.activeVid=0n;await refreshMetrics();route('home');}
+    };
+  }
+
+  renderEmMode();
 }
 
 /* ==========================================================================
@@ -3954,6 +4147,11 @@ async function init(){
   // Подгружаем логотип в сайдбар
   const sl = document.getElementById('sidebarLogo');
   if(sl) sl.innerHTML = anchorLogoSvg(44);
+
+  // Закрытие мобильной плашки-подсказки
+  const tsClose = $('#tipSheetClose'), tsBack = $('#tipSheetBackdrop');
+  if(tsClose) tsClose.onclick = hideTipSheet;
+  if(tsBack) tsBack.onclick = hideTipSheet;
 
   // Динамический favicon
   try{
