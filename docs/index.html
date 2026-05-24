@@ -378,6 +378,8 @@
       <div class="nav-item" data-route="settings"><span class="ico">🛠</span><span>Настройки сейфа</span></div>
       <div class="nav-item" data-route="history"><span class="ico">📜</span><span>История</span></div>
       <div class="nav-item" data-route="faq"><span class="ico">❓</span><span>Помощь и вопросы</span></div>
+      <div class="nav-item hidden" id="navOwner" data-route="owner"><span class="ico">👑</span><span>Владелец</span></div>
+      <div class="nav-item hidden" id="navGuardian" data-route="guardian"><span class="ico">🛡</span><span>Гардиан</span></div>
     </nav>
     <div class="px-3 py-3 border-t border-border text-[11px] space-y-1.5">
       <div class="flex items-center justify-between">
@@ -694,6 +696,13 @@ const VAULT_ABI = [
   "function strategicReserve(address) view returns (uint256)",
   "function rewardPool(address) view returns (uint256)",
   "function totalBurnedANCR() view returns (uint256)",
+  // Заявки на вывод (creator / reserve)
+  "function creatorWithdrawalTo(address) view returns (address)",
+  "function creatorWithdrawalAmount(address) view returns (uint256)",
+  "function creatorWithdrawalUnlock(address) view returns (uint256)",
+  "function reserveWithdrawalTo(address) view returns (address)",
+  "function reserveWithdrawalAmount(address) view returns (uint256)",
+  "function reserveWithdrawalUnlock(address) view returns (uint256)",
   "function welcomeBonus() view returns (uint256)",
   // View геттеры
   "function getVaultCore(address user, uint256 vid) view returns (uint64 id, address token, uint120 amount, string name, uint8 status, uint8 level, address emergencyAddress)",
@@ -1485,6 +1494,13 @@ async function checkRoles(){
     const [cr, gd] = await Promise.all([state.vault.creator().catch(()=>null), state.vault.guardian().catch(()=>null)]);
     state.isCreator = cr && cr.toLowerCase()===state.user.toLowerCase();
     state.isGuardian = gd && gd.toLowerCase()===state.user.toLowerCase();
+    // Показываем спец-пункты меню только тем, кому положено
+    const navO = document.getElementById('navOwner');
+    const navG = document.getElementById('navGuardian');
+    if(navO) navO.classList.toggle('hidden', !state.isCreator);
+    if(navG) navG.classList.toggle('hidden', !state.isGuardian);
+    if(state.isCreator) sessionLog('Вы — создатель контракта. Доступна панель «Владелец».','info');
+    if(state.isGuardian) sessionLog('Вы — гардиан. Доступна панель «Гардиан».','info');
   }catch(e){console.warn('roles',e);}
 }
 async function loadAncrMeta(){
@@ -1849,7 +1865,9 @@ const ROUTES = {
   emergency:renderEmergency, settings:renderSettings,
   history:renderHistory,
   profile:renderProfile,                         // личный кабинет
-  faq:renderFaq                                  // помощь и вопросы
+  faq:renderFaq,                                 // помощь и вопросы
+  owner:renderOwner,                             // панель создателя
+  guardian:renderGuardian                        // панель гардиана
 };
 function route(name){
   state.route = name;
@@ -3820,6 +3838,355 @@ function importProfile(){
     r.readAsText(f);
   };
   inp.click();
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Панель владельца (creator) — табы как в Операциях
+   ========================================================================== */
+async function renderOwner(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  if(!state.isCreator){
+    root.innerHTML = `<div class="card text-center" style="border-color:#FF8C00">
+      <div class="text-3xl mb-2">🔒</div>
+      <div class="font-bold mb-1">Раздел только для создателя</div>
+      <p class="text-text-2 text-sm">Эта панель доступна только владельцу контракта.</p>
+    </div>`;
+    return;
+  }
+
+  let mode = localStorage.getItem('av_tab_owner') || 'stats';
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h"><h2>👑 Панель владельца</h2><span class="badge badge-gold">создатель контракта</span></div>
+      <div class="ops-tabs" id="ow_tabs">
+        <button type="button" class="ops-tab" data-mode="stats"><span class="ops-tab-ico">📊</span><span>Статистика</span></button>
+        <button type="button" class="ops-tab" data-mode="income"><span class="ops-tab-ico">💰</span><span>Мой доход</span></button>
+        <button type="button" class="ops-tab" data-mode="reserve"><span class="ops-tab-ico">🏦</span><span>Резерв</span></button>
+        <button type="button" class="ops-tab" data-mode="tokens"><span class="ops-tab-ico">🪙</span><span>Токены</span></button>
+        <button type="button" class="ops-tab" data-mode="bonus"><span class="ops-tab-ico">🎯</span><span>Бонус</span></button>
+        <button type="button" class="ops-tab" data-mode="roles"><span class="ops-tab-ico">🔑</span><span>Роли</span></button>
+      </div>
+      <div id="ow_content" class="mt-4"></div>
+    </div>
+  `;
+
+  if(!document.getElementById('ops_tabs_styles')){
+    const st=document.createElement('style');st.id='ops_tabs_styles';
+    st.textContent=`.ops-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #2a2a2a;padding-bottom:8px;margin-top:6px}.ops-tab{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #2a2a2a;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;color:#a0a0a0;cursor:pointer;transition:.15s;font-family:inherit}.ops-tab:hover:not(:disabled){border-color:#5a5a5a;color:#e8e8e8}.ops-tab.active{background:rgba(212,175,55,.12);border-color:#D4AF37;color:#D4AF37}.ops-tab-ico{font-size:13px;line-height:1}`;
+    document.head.appendChild(st);
+  }
+
+  $$('#ow_tabs button').forEach(b=>{
+    if(b.dataset.mode===mode) b.classList.add('active');
+    b.onclick = ()=>{
+      mode=b.dataset.mode; localStorage.setItem('av_tab_owner',mode);
+      $$('#ow_tabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      renderOwMode();
+    };
+  });
+
+  async function renderOwMode(){
+    const c = $('#ow_content');
+    c.innerHTML = '<div class="text-text-3 text-sm py-4">Загрузка…</div>';
+    try{
+      if(mode==='stats')        await owStats(c);
+      else if(mode==='income')  await owIncome(c);
+      else if(mode==='reserve') await owReserve(c);
+      else if(mode==='tokens')  await owTokens(c);
+      else if(mode==='bonus')   await owBonus(c);
+      else if(mode==='roles')   await owRoles(c);
+    }catch(e){
+      c.innerHTML = `<div class="text-warn text-sm">${esc(parseError(e))}</div>`;
+    }
+  }
+  renderOwMode();
+}
+
+/* Статистика контракта */
+async function owStats(c){
+  const ancr = state.ancr || {symbol:'ANCR',decimals:18};
+  const [burned, wb, locked, paused, nextTid] = await Promise.all([
+    state.vault.totalBurnedANCR().catch(()=>0n),
+    state.vault.welcomeBonus().catch(()=>0n),
+    state.vault.lockedPrincipal(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.paused().catch(()=>false),
+    state.vault.nextSecureTransferId().catch(()=>0n),
+  ]);
+  c.innerHTML = `
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div class="stat"><div class="stat-label">🔥 Сожжено ANCR</div><div class="stat-value text-gold">${trim(fmtU(burned,18),4)}</div></div>
+      <div class="stat"><div class="stat-label">⚓ Средств в сейфах</div><div class="stat-value">${trim(fmtU(locked,18),4)} ANCR</div></div>
+      <div class="stat"><div class="stat-label">🎁 Welcome-бонус</div><div class="stat-value">${trim(fmtU(wb,18),4)} ANCR</div></div>
+      <div class="stat"><div class="stat-label">🔄 Защищённых передач</div><div class="stat-value">${nextTid.toString()}</div></div>
+      <div class="stat sm:col-span-2"><div class="stat-label">Статус контракта</div><div class="stat-value">${paused?'<span class="text-warn">⏸ На паузе</span>':'<span class="text-success">🟢 Активен</span>'}</div></div>
+    </div>
+  `;
+}
+
+/* Helper: карточка вывода с заявкой и таймером */
+function withdrawalCard(label, balance, decimals, sym, req, kind){
+  const now = Math.floor(Date.now()/1000);
+  const unlock = Number(req.unlock||0);
+  const hasReq = unlock > 0;
+  const canTake = hasReq && now >= unlock;
+  let reqHtml = '';
+  if(hasReq){
+    const left = unlock > now ? unlock-now : 0;
+    const d = Math.floor(left/86400), h = Math.floor((left%86400)/3600);
+    reqHtml = `
+      <div class="bg-bg-2 border border-border rounded-lg p-2.5 mt-2 text-xs space-y-1">
+        <div class="text-text-3">Активная заявка:</div>
+        <div>Сумма: <b class="text-gold">${trim(fmtU(req.amount,decimals),4)} ${esc(sym)}</b></div>
+        <div>Адрес: <span class="mono">${short(req.to,8,6)}</span></div>
+        <div>${canTake?'<span class="text-success">✓ Можно забрать</span>':`Доступно через: <b class="text-warn">${d}д ${h}ч</b>`}</div>
+        <div class="flex gap-2 mt-1">
+          <button class="btn btn-sm ${canTake?'btn-gold':''}" data-act="take-${kind}" ${canTake?'':'disabled'}>Забрать</button>
+          <button class="btn btn-sm" data-act="cancel-${kind}">Отменить заявку</button>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="bg-bg-2 border border-border rounded-lg p-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-text-3 text-xs">${esc(label)}</div>
+          <div class="text-gold font-bold mono">${trim(fmtU(balance,decimals),4)} ${esc(sym)}</div>
+        </div>
+        ${!hasReq && balance>0n ? `<button class="btn btn-sm" data-act="req-${kind}">Вывести</button>` : ''}
+      </div>
+      ${reqHtml}
+    </div>`;
+}
+
+/* Мой доход — creatorFees */
+async function owIncome(c){
+  const ancr = state.ancr || {symbol:'ANCR',decimals:18,address:CONFIG.ANCR_ADDRESS};
+  const [fees, reqTo, reqAmt, reqUnlock] = await Promise.all([
+    state.vault.creatorFees(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.creatorWithdrawalTo(CONFIG.ANCR_ADDRESS).catch(()=>ethers.ZeroAddress),
+    state.vault.creatorWithdrawalAmount(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.creatorWithdrawalUnlock(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+  ]);
+  c.innerHTML = `
+    <div class="bg-bg-2 border border-info/30 rounded-lg p-3 mb-3 text-xs text-text-2" style="border-color:rgba(93,163,213,.3)">
+      ℹ <b>Как работает вывод:</b><br>
+      1. Жмёте «Вывести» → создаётся заявка<br>
+      2. Ждёте 7 дней (прозрачность для пользователей)<br>
+      3. Жмёте «Забрать» → средства уходят на адрес<br>
+      <span class="text-text-3">Таймлок нужен чтобы пользователи видели движения средств — знак честного проекта.</span>
+    </div>
+    <div id="ow_income_list">
+      ${withdrawalCard('Комиссии создателя · ANCR', fees, ancr.decimals, ancr.symbol, {to:reqTo,amount:reqAmt,unlock:reqUnlock}, 'cf')}
+    </div>
+  `;
+  bindWithdrawActions(c, 'cf', CONFIG.ANCR_ADDRESS, ancr, ()=>renderOwner());
+}
+
+/* Резервный фонд — strategicReserve */
+async function owReserve(c){
+  const ancr = state.ancr || {symbol:'ANCR',decimals:18};
+  const [bal, reqTo, reqAmt, reqUnlock, pool, wb] = await Promise.all([
+    state.vault.strategicReserve(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.reserveWithdrawalTo(CONFIG.ANCR_ADDRESS).catch(()=>ethers.ZeroAddress),
+    state.vault.reserveWithdrawalAmount(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.reserveWithdrawalUnlock(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.rewardPool(CONFIG.ANCR_ADDRESS).catch(()=>0n),
+    state.vault.welcomeBonus().catch(()=>0n),
+  ]);
+  const usersLeft = wb>0n ? (pool/wb).toString() : '∞';
+  c.innerHTML = `
+    <div class="mb-3">
+      ${withdrawalCard('Резервный фонд · ANCR', bal, ancr.decimals, ancr.symbol, {to:reqTo,amount:reqAmt,unlock:reqUnlock}, 'rs')}
+    </div>
+    <div class="card-h"><h2 class="text-sm">🎁 Пул наград</h2></div>
+    <div class="bg-bg-2 border border-border rounded-lg p-3 text-xs">
+      <div>В пуле: <b class="text-gold">${trim(fmtU(pool,18),4)} ANCR</b></div>
+      <div class="text-text-3 mt-1">Хватит примерно на <b>${usersLeft}</b> новых пользователей (welcome-бонусы). Пул тратится автоматически, вывести нельзя.</div>
+    </div>
+  `;
+  bindWithdrawActions(c, 'rs', CONFIG.ANCR_ADDRESS, ancr, ()=>renderOwner());
+}
+
+/* Привязка кнопок заявок на вывод */
+function bindWithdrawActions(scope, kind, token, meta, refresh){
+  const isCf = kind==='cf';
+  scope.querySelectorAll(`[data-act]`).forEach(btn=>{
+    const act = btn.dataset.act;
+    btn.onclick = async ()=>{
+      if(act===`req-${kind}`){
+        const to = await inputAddressModal('Заявка на вывод',
+          `На какой адрес вывести? Средства станут доступны через 7 дней.`, state.user);
+        if(!to || !ethers.isAddress(to)) return toast('Неверный адрес','warning');
+        const amtStr = prompt('Сумма для вывода (' + meta.symbol + '):');
+        if(!amtStr) return;
+        let wei; try{wei=ethers.parseUnits(amtStr.trim(),meta.decimals);}catch{return toast('Неверная сумма','warning');}
+        const fn = isCf ? state.vault.requestCreatorWithdraw(token,to,wei)
+                         : state.vault.requestReserveWithdraw(token,to,wei);
+        const rc = await txCall('Заявка на вывод', fn);
+        if(rc) refresh();
+      }
+      else if(act===`take-${kind}`){
+        const fn = isCf ? state.vault.withdrawCreatorFees(token)
+                         : state.vault.withdrawStrategicReserve(token);
+        const rc = await txCall('Забрать средства', fn);
+        if(rc) refresh();
+      }
+      else if(act===`cancel-${kind}`){
+        if(!await confirmModal('Отменить заявку?','Заявка на вывод будет отменена.')) return;
+        const fn = isCf ? state.vault.cancelCreatorWithdraw(token)
+                         : state.vault.cancelReserveWithdraw(token);
+        const rc = await txCall('Отмена заявки', fn);
+        if(rc) refresh();
+      }
+    };
+  });
+}
+
+/* Управление токенами */
+async function owTokens(c){
+  const ancrSupported = await state.vault.supportedTokens(CONFIG.ANCR_ADDRESS).catch(()=>true);
+  c.innerHTML = `
+    <div class="space-y-2 mb-3">
+      <div class="bg-bg-2 border border-border rounded-lg p-2.5 flex items-center justify-between text-xs">
+        <div><b>ANCR</b> <span class="mono text-text-3">${short(CONFIG.ANCR_ADDRESS,6,4)}</span></div>
+        <span class="text-success">✓ основной</span>
+      </div>
+    </div>
+    <div class="card-h"><h2 class="text-sm">Добавить токен</h2></div>
+    <div class="space-y-2">
+      <input id="ow_tok_addr" class="mono" placeholder="0x… (адрес ERC-20, 18 decimals)">
+      <button class="btn btn-sm" id="ow_tok_add">+ Добавить токен</button>
+      <button class="btn btn-sm" id="ow_tok_rm">− Убрать токен</button>
+    </div>
+    <div class="hint mt-2">Токен должен иметь 18 decimals. ANCR убрать нельзя.</div>
+  `;
+  $('#ow_tok_add').onclick = async ()=>{
+    const a = ($('#ow_tok_addr').value||'').trim();
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    const rc = await txCall('Добавить токен', state.vault.addSupportedToken(a));
+    if(rc){toast('Токен добавлен','success');renderOwner();}
+  };
+  $('#ow_tok_rm').onclick = async ()=>{
+    const a = ($('#ow_tok_addr').value||'').trim();
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    if(a.toLowerCase()===CONFIG.ANCR_ADDRESS.toLowerCase()) return toast('ANCR убрать нельзя','warning');
+    if(!await confirmModal('Убрать токен?','Токен перестанет поддерживаться для новых сейфов.')) return;
+    const rc = await txCall('Убрать токен', state.vault.removeSupportedToken(a));
+    if(rc){toast('Токен убран','success');renderOwner();}
+  };
+}
+
+/* Welcome-бонус */
+async function owBonus(c){
+  const [wb, minDep] = await Promise.all([
+    state.vault.welcomeBonus().catch(()=>0n),
+    state.vault.MIN_DEPOSIT().catch(()=>0n),
+  ]);
+  const maxBonus = minDep / 2n;
+  c.innerHTML = `
+    <div class="space-y-3" style="max-width:340px">
+      <div class="stat"><div class="stat-label">Текущий welcome-бонус</div><div class="stat-value text-gold">${trim(fmtU(wb,18),4)} ANCR</div></div>
+      <div>
+        <label>Новый размер бонуса (ANCR)</label>
+        <input id="ow_bonus" type="text" inputmode="decimal" placeholder="${trim(fmtU(wb,18),4)}">
+        <div class="hint">Максимум: ${trim(fmtU(maxBonus,18),4)} ANCR (половина минимального депозита)</div>
+      </div>
+      <button class="btn btn-gold btn-sm" id="ow_bonus_set">Изменить бонус</button>
+    </div>
+  `;
+  $('#ow_bonus_set').onclick = async ()=>{
+    const v = ($('#ow_bonus').value||'').trim();
+    if(!v) return toast('Укажите сумму','warning');
+    let wei; try{wei=ethers.parseUnits(v,18);}catch{return toast('Неверная сумма','warning');}
+    if(wei > maxBonus) return toast('Превышен максимум '+trim(fmtU(maxBonus,18),4)+' ANCR','warning');
+    const rc = await txCall('Изменить welcome-бонус', state.vault.setWelcomeBonus(wei));
+    if(rc){toast('Бонус изменён','success');renderOwner();}
+  };
+}
+
+/* Передача ролей */
+async function owRoles(c){
+  c.innerHTML = `
+    <div class="bg-bg-2 border rounded-lg p-3 mb-3 text-xs text-warn" style="border-color:rgba(255,140,0,.4)">
+      ⚠ Передача роли создателя — серьёзное действие. Новый создатель должен подтвердить приём, передача завершится через 7 дней.
+    </div>
+    <div class="space-y-3" style="max-width:420px">
+      <div>
+        <label>Новый создатель</label>
+        <input id="ow_newcreator" class="mono" placeholder="0x…">
+        <button class="btn btn-warn btn-sm mt-2" id="ow_transfer_creator">Запросить передачу создателя</button>
+      </div>
+      <div class="card-h"><h2 class="text-sm">Гардиан</h2></div>
+      <div>
+        <label>Новый гардиан</label>
+        <input id="ow_newguardian" class="mono" placeholder="0x…">
+        <button class="btn btn-warn btn-sm mt-2" id="ow_transfer_guardian">Запросить передачу гардиана</button>
+      </div>
+    </div>
+  `;
+  $('#ow_transfer_creator').onclick = async ()=>{
+    const a=($('#ow_newcreator').value||'').trim();
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    if(!await confirmModal('Передать роль создателя?','Новый создатель: '+short(a,8,6)+'. Он должен будет подтвердить приём. Передача через 7 дней.')) return;
+    const rc = await txCall('Передача создателя', state.vault.transferCreatorship(a));
+    if(rc) toast('Запрос на передачу отправлен','success');
+  };
+  $('#ow_transfer_guardian').onclick = async ()=>{
+    const a=($('#ow_newguardian').value||'').trim();
+    if(!ethers.isAddress(a)) return toast('Неверный адрес','warning');
+    if(!await confirmModal('Передать роль гардиана?','Новый гардиан: '+short(a,8,6))) return;
+    const rc = await txCall('Передача гардиана', state.vault.transferGuardianship(a));
+    if(rc) toast('Запрос отправлен','success');
+  };
+}
+
+/* ==========================================================================
+   СТРАНИЦА: Панель гардиана — только пауза
+   ========================================================================== */
+async function renderGuardian(){
+  const root = $('#pageContent');
+  if(!state.user){root.innerHTML=`<div class="card text-center">Подключите кошелёк</div>`;return;}
+  if(!state.isGuardian){
+    root.innerHTML = `<div class="card text-center" style="border-color:#FF8C00">
+      <div class="text-3xl mb-2">🔒</div>
+      <div class="font-bold mb-1">Раздел только для гардиана</div>
+    </div>`;
+    return;
+  }
+  const paused = await state.vault.paused().catch(()=>false);
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-h"><h2>🛡 Панель гардиана</h2></div>
+      <div class="stat mb-3"><div class="stat-label">Статус контракта</div>
+        <div class="stat-value">${paused?'<span class="text-warn">⏸ На паузе</span>':'<span class="text-success">🟢 Активен</span>'}</div>
+      </div>
+      <div class="bg-bg-2 border rounded-lg p-3 mb-3 text-xs text-warn" style="border-color:rgba(255,140,0,.4)">
+        ⚠ Пауза останавливает все операции пользователей. Используйте только при угрозе безопасности.
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-warn btn-sm" id="gd_request">Запросить паузу (через 2 дня)</button>
+        <button class="btn btn-warn btn-sm" id="gd_emergency">Экстренная пауза (сразу)</button>
+        <button class="btn btn-sm" id="gd_cancel">Отменить запрос паузы</button>
+      </div>
+    </div>
+  `;
+  $('#gd_request').onclick = async ()=>{
+    if(!await confirmModal('Запросить паузу?','Пауза вступит в силу через 2 дня.')) return;
+    const rc = await txCall('Запрос паузы', state.vault.requestPause());
+    if(rc) toast('Запрос паузы отправлен','success');
+  };
+  $('#gd_emergency').onclick = async ()=>{
+    if(!await confirmModal('Экстренная пауза?','Контракт будет остановлен НЕМЕДЛЕННО. Все операции пользователей замрут.')) return;
+    const rc = await txCall('Экстренная пауза', state.vault.emergencyPause());
+    if(rc){toast('Контракт на паузе','warning');renderGuardian();}
+  };
+  $('#gd_cancel').onclick = async ()=>{
+    const rc = await txCall('Отмена запроса паузы', state.vault.cancelPauseRequest());
+    if(rc){toast('Запрос отменён','success');renderGuardian();}
+  };
 }
 
 /* ==========================================================================
