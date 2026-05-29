@@ -118,3 +118,12 @@ OpenZeppelin's penetration test of **Private State Manager** (Feb 2026, Rust/Typ
 - Coverage: API auth (Falcon signatures), rate limiting, multi-party coordination, PostgreSQL
 
 AnchorVault V45's operational security docs (SECURITY.md, INSTITUTIONAL_SECURITY.md) align with this infrastructure-level scrutiny.
+
+## 16. Multi-Sig Off-Chain Client Audit (Miden PSM)
+OpenZeppelin's audit of **Miden Multisig Client** (Feb 2026, Rust/TypeScript) reveals off-chain coordination risks:
+- **0 Critical**, **2 High**, **10 Medium**, **9 Low** issues identified
+- 24 of 26 findings resolved
+- High: blind-signing of unverified transaction summaries → validates our typed EIP-712 design
+- Coverage: multi-signature workflows, PSM coordination, dual Rust/TS implementations
+
+AnchorVault V45's architecture eliminates blind-signing by binding every signature to a complete, self-verifying structHash.
