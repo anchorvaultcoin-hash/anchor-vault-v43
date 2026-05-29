@@ -227,7 +227,7 @@ contract AnchorVaultV45Test is Test {
         vm.warp(block.timestamp + 49 hours);
 
         (nonce,,) = vault.getVaultAuth(alice, vid);
-        uint256 withdrawDeadline = block.timestamp + 1 hours;
+        uint256 withdrawDeadline = block.timestamp + 2 hours;
         bytes32 wsh = keccak256(abi.encode(WITHDRAW_TYPEHASH, alice, vid, uint256(20 ether), alice, nonce, withdrawDeadline));
         bytes memory wsig = _sign(aMainPk, wsh);
         uint256 balBefore = ancr.balanceOf(alice);
