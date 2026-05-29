@@ -58,3 +58,11 @@ OpenZeppelin's audit of **Token Ops FHE** (March–April 2026) demonstrates the 
 - Full coverage of Solidity, FHEVM, access control, and rounding errors
 
 AnchorVault V45 is built with the same security-first mindset and is ready for an equally rigorous external audit.
+
+## 9. Cross-Chain Audit Precedent
+OpenZeppelin's audit of **Stellar Contracts** (March 2026, Rust/Soroban) further demonstrates their multi-ecosystem rigor:
+- **0 Critical**, **1 High**, **6 Medium**, **9 Low** issues identified
+- 18 of 21 issues resolved; 3 acknowledged as design choices
+- Deep coverage of smart accounts, governance, math, access control, and DKIM registry
+
+AnchorVault V45 aspires to the same depth of scrutiny, regardless of the target chain or language.
