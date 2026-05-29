@@ -92,3 +92,11 @@ OpenZeppelin's audit of **PrivacyBoost** (Feb–Mar 2026, Solidity + Go/gnark) d
 - Coverage: ZK circuits (Groth16), UTXO notes, EdDSA/BabyJubJub, TEE relayers, censorship resistance
 
 AnchorVault V45 shares the commitment to rigorous verification, even in non-ZK contexts, and is prepared for equally thorough scrutiny.
+
+## 13. Cross-Chain Bridge Audit (Across Protocol)
+OpenZeppelin's audit of **Across Protocol** (Feb–Mar 2026, Solidity) covers a cross-chain bridge with optimistic relayers:
+- **0 Critical**, **0 High**, **1 Medium**, **1 Low** issues identified
+- Medium: EIP-712 signature not bound to Merkle leaf → relayers could reroute user deposits
+- Coverage: CREATE2 counterfactual deposits, EIP-712 signatures, Merkle proofs, Tron compatibility
+
+AnchorVault V45's EIP-712 design preempts this class of replay by binding every signature to a unique vault, nonce, and operation typehash.
