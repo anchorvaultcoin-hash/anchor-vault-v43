@@ -1,0 +1,1009 @@
+
+
+  V44 Smoke
+    ✔ VERSION = 44 (796ms)
+    ✔ setGlobalEmergency работает один раз
+    ✔ openVault требует globalEmergency
+    ✔ openVault создаёт сейф с глобальным emergency
+    ✔ МУЛЬТИ-токен: alice может открыть ANCR + другой токен
+    ✔ Нельзя открыть 2 сейфа с одинаковым токеном
+    ✔ panicWithdraw — 20% штраф, средства на globalEmergency
+    ✔ panicWithdraw НЕ работает без emergency
+    ✔ secureTransfer init + confirm
+    ✔ secureTransfer cancel — отправитель возвращает сейф
+    ✔ secureTransfer 3 неверных попытки → expired
+    ✔ secureTransfer reclaimExpired через 48 часов
+    ✔ panicWithdraw работает ДАЖЕ при voluntaryLock — спасательная кнопка от вора
+    ✔ FROZEN сейф нельзя депозит/вывод/закрыть
+
+  Smoke: AnchorVaultV43
+    ✔ деплоится и version = 43 (49ms)
+    ✔ creator = deployer, guardian установлен
+    ✔ ANCR в supportedTokens
+    ✔ реверт ZeroAddress на нулевой ANCR
+    ✔ alice открывает SAFE и видит свой vault
+    ✔ withdraw мгновенный, 0.5% штраф
+    ✔ WeakCode реверт при короткой фразе
+    ✔ emergencyWithdrawToAny — 15% штраф на любой адрес
+
+  AnchorVaultV43 — Tokens
+    addSupportedToken
+      ✔ 1. creator добавляет токен (FOT) — supportedTokens=true + TokenSupported
+      ✔ 2. добавление уже supported токена (idempotent) — supportedTokens=true + событие
+      ✔ 3. добавление нового токена (ещё один MockANCR) — supportedTokens=true
+      ✔ 4. revert NotCreator (bob пытается добавить)
+      ✔ 5. revert ZeroAddress при address(0)
+      ✔ 6. revert при попытке добавить EOA (вызов decimals ревертит)
+    removeSupportedToken
+      ✔ 7. creator удаляет токен (FOT) — supportedTokens=false + TokenUnsupported
+      ✔ 8. удаление уже удалённого токена — supportedTokens=false + событие
+      ✔ 9. revert NotCreator (bob пытается удалить)
+      ✔ 10. revert InvalidAddress при попытке удалить ANCR
+      ✔ 11. удаление токена, который не был добавлен — supportedTokens=false + TokenUnsupported
+    Edge cases
+      ✔ 12. нельзя openVault на удалённый токен
+      ✔ 13. donateToRewardPool ревертит на unsupported токен
+      ✔ 14. donateToRewardPool работает на supported токен
+      ✔ 15. depositToVault работает после удаления токена из supported
+      ✔ 16. supportedTokens не меняется для других токенов при удалении одного
+      ✔ 17. guardian не может addSupportedToken (NotCreator)
+      ✔ 18. guardian не может removeSupportedToken (NotCreator)
+      ✔ 19. добавление ANCR (уже supported) — supportedTokens остаётся true + TokenSupported
+      ✔ 20. повторное добавление удалённого токена emits TokenSupported и supportedTokens=true
+      ✔ 21. после удаления supportedTokens[token] = false, но ANCR остаётся supported
+      ✔ 22. добавление нескольких разных токенов — все supported
+      ✔ 23. добавление токена дважды не меняет его supported статус
+
+  AnchorVaultV43 — openVault
+    Успешные сценарии
+      ✔ 1. открывает SAFE-сейф с ANCR
+      ✔ 2. открывает VAULT-сейф с ANCR
+      ✔ 3. открывает FORTRESS-сейф с ANCR
+      ✔ 4. amount = net после вычета 0.2% (SAFE)
+      ✔ 5. amount = net после вычета 0.2% (VAULT)
+      ✔ 6. amount = net после вычета 0.2% (FORTRESS)
+      ✔ 7. lockedPrincipal увеличен на net
+      ✔ 8. событие VaultCreated с корректными args
+      ✔ 9. событие FeeCollected при открытии
+      ✔ 10. activeVaultId = 1 после открытия
+      ✔ 11. userVaultCount = 1 после открытия
+      ✔ 12. getVaultSecurity: failCount = 0
+    Реверты
+      ✔ 13. WeakCode для code
+      ✔ 14. WeakCode для antiPhrase
+      ✔ 15. WeakCode для recovery
+      ✔ 16. CodeTooLong для code
+      ✔ 17. CodeTooLong для antiPhrase
+      ✔ 18. CodeTooLong для recovery
+      ✔ 19. TokenNotSupported
+      ✔ 20. DepositBelowMinimum (amount < MIN_DEPOSIT)
+      ✔ 21. InvalidLevel (level=3)
+      ✔ 22. ZeroAddress emergencyAddress
+      ✔ 23. InvalidAddress emergencyAddress = msg.sender
+      ✔ 24. InvalidAddress emergencyAddress = contract
+      ✔ 25. VaultLimitReached (уже есть active)
+      ✔ 26. ContractPaused блокирует openVault
+    Multi-user и special
+      ✔ 27. alice и bob открывают сейфы независимо
+      ✔ 28. разные уровни для разных пользователей
+      ✔ 29. lockedPrincipal накапливается от разных пользователей
+      ✔ 30. штраф при открытии распределяется (PenaltyDistributed)
+    Краевые случаи
+      ✔ 31. открытие с большим количеством токенов
+      ✔ 32. второй сейф после закрытия первого
+      ✔ 33. время lockedAt и depositedAt устанавливаются
+      ✔ 34. status = ACTIVE (0) после открытия
+      ✔ 35. id в хранилище = 1 для первого сейфа
+      ✔ 36. нельзя открыть сейф с level > 2
+      ✔ 37. name сохраняется корректно
+      ✔ 38. emergencyAddress сохраняется
+      ✔ 39. токен vault'а совпадает с токеном депозита
+    FOT токены
+      ✔ 40. openVault с FOT токеном после добавления в supported
+      ✔ 41. FOT: lockedPrincipal учитывает реально полученные токены
+
+  AnchorVaultV43 — depositToVault
+    ✔ 17. два депозита подряд увеличивают amount
+    ✔ 18. депозит после rotateCodes с новым кодом
+    Успешные сценарии
+      ✔ 1. депозит в SAFE сейф увеличивает amount
+      ✔ 2. депозит в VAULT сейф увеличивает amount
+      ✔ 3. депозит в FORTRESS сейф увеличивает amount
+      ✔ 4. lockedPrincipal растёт после депозита
+      ✔ 5. событие VaultDeposited
+      ✔ 6. событие FeeCollected при депозите
+    Реверты
+      ✔ 7. BadVaultId (несуществующий)
+      ✔ 8. NotActive (закрытый сейф)
+      ✔ 9. ContractPaused
+      ✔ 10. DepositBelowMinimum (слишком мало)
+      ✔ 11. депозит в чужой сейф ревертит BadVaultId
+      ✔ 12. Locked (voluntaryLockUntil)
+      ✔ 13. 0 amount ревертит DepositBelowMinimum
+    Wrong code
+      ✔ 14. неверный код — amount не меняется
+      ✔ 15. WrongCodeAttempt событие при неверном коде
+    Изоляция пользователей
+      ✔ 16. депозит alice не влияет на сейф bob
+
+  AnchorVaultV43 — transferVault
+    Успешные сценарии
+      ✔ 1. перевод сейфа от alice к bob
+      ✔ 2. старый сейф alice удалён
+      ✔ 3. activeVaultId сброшен у alice
+      ✔ 4. activeVaultId = 1 у bob
+      ✔ 5. новый владелец может использовать новые коды
+      ✔ 6. старые коды не работают
+      ✔ 7. событие VaultTransferred
+    Реверты
+      ✔ 8. InvalidAddress to=0
+      ✔ 9. BadVaultId
+      ✔ 10. NotActive
+      ✔ 11. VaultLimitReached
+      ✔ 12. WrongCode на antiPhrase
+
+  AnchorVaultV43 — transferVault
+    ✔ 13. name переносится
+    ✔ 14. emergencyAddress переносится
+    ✔ 15. level переносится
+    ✔ 16. token переносится
+    ✔ 17. WeakCode newCode
+    ✔ 18. CodeTooLong newCode
+    ✔ 19. AntiPhishRequired
+    ✔ 20. цепочка alice → bob → carol
+    Успешные сценарии
+      ✔ 1. перевод сейфа от alice к bob
+      ✔ 2. старый сейф alice удалён
+      ✔ 3. activeVaultId сброшен у alice
+      ✔ 4. activeVaultId = 1 у bob
+      ✔ 5. новый владелец может использовать новые коды
+      ✔ 6. старые коды не работают
+      ✔ 7. событие VaultTransferred
+    Реверты
+      ✔ 8. InvalidAddress to=0
+      ✔ 9. BadVaultId
+      ✔ 10. NotActive
+      ✔ 11. VaultLimitReached
+      ✔ 12. WrongCode на antiPhrase
+
+  AnchorVaultV43 — earlyClose
+    Успешные сценарии
+      ✔ 1. earlyClose закрывает сейф
+      ✔ 2. 5% штраф удержан
+      ✔ 3. activeVaultId сброшен
+      ✔ 4. amount = 0 после закрытия
+      ✔ 5. событие VaultEarlyClosed
+      ✔ 6. lockedPrincipal уменьшен
+    Реверты
+      ✔ 7. BadVaultId
+      ✔ 8. NotActive
+      ✔ 9. WrongCode на recovery
+      ✔ 10. Locked (voluntaryLock)
+    Штрафы
+      ✔ 11. PenaltyDistributed при earlyClose
+      ✔ 12. средства приходят на msg.sender
+      ✔ 13. earlyClose работает после депозита
+
+  AnchorVaultV43 — recoverToSafe
+    ✔ 1. средства на emergencyAddress
+    ✔ 2. vault закрыт
+    ✔ 3. activeVaultId сброшен
+    ✔ 4. событие VaultRecovered
+    ✔ 5. PenaltyDistributed
+    ✔ 6. BadVaultId
+    ✔ 7. NotActive
+    ✔ 8. Locked (voluntaryLock)
+    ✔ 9. amount=0 после recover
+    ✔ 10. recoverToSafe после депозита
+
+  AnchorVaultV43 — emergencyWithdrawToAny
+    ✔ 1. вывод на любой адрес
+    ✔ 2. vault закрыт
+    ✔ 3. activeVaultId сброшен
+    ✔ 4. событие EmergencyWithdrawToAny
+    ✔ 5. PenaltyDistributed
+    ✔ 6. BadVaultId
+    ✔ 7. NotActive
+    ✔ 8. InvalidAddress to=0
+    ✔ 9. InvalidAddress to=contract
+    ✔ 10. WrongCode на antiPhrase
+    ✔ 11. AntiPhishRequired
+    ✔ 12. Locked (voluntaryLock)
+    ✔ 13. amount=0 после emergencyAny
+
+  AnchorVaultV43 — rotateCodes
+    ✔ 1. успешная смена кодов
+    ✔ 2. новые коды работают
+    ✔ 3. старые коды не работают
+    ✔ 4. событие CodesRotated
+    ✔ 5. failCount сбрасывается
+    ✔ 6. BadVaultId
+    ✔ 7. NotActive
+    ✔ 8. WeakCode для новых
+    ✔ 9. Locked (voluntaryLock)
+    ✔ 10. WrongCode на старом recovery
+    ✔ 11. после rotateCodes можно депозит делать
+    ✔ 12. CodeTooLong для новых кодов
+    ✔ 13. WrongCode на старом коде
+    ✔ 14. rotateCodes после deposit
+    ✔ 14. rotateCodes после deposit
+
+  AnchorVaultV43 — setTimelock / setVoluntaryLock
+    ✔ 13. timelock можно изменить на 0
+    ✔ 14. voluntaryLock блокирует transfer
+    ✔ 12. voluntaryLock блокирует earlyClose
+    ✔ 13. timelock можно изменить на 0
+    ✔ 14. voluntaryLock блокирует transfer
+    ✔ 15. TimelockSet событие
+    setTimelock
+      ✔ 1. SAFE: 0 часов проходит
+      ✔ 2. VAULT: 24 часа проходит
+      ✔ 3. FORTRESS: 100 часов проходит
+      ✔ 4. TimelockTooLong для SAFE (1 час)
+      ✔ 5. TimelockTooLong для VAULT (73 часа)
+      ✔ 6. TimelockTooLong для FORTRESS (169 часов)
+      ✔ 7. WrongCode не меняет timelock
+    setVoluntaryLock
+      ✔ 8. установка лока на 1 день
+      ✔ 9. LockTooLong (> 5 лет)
+      ✔ 10. InvalidAmount (<= now)
+      ✔ 11. Lock блокирует вывод
+    Дополнительные
+      ✔ 12. voluntaryLock блокирует earlyClose
+
+  AnchorVaultV43 — changeEmergencyAddress
+    ✔ 1. смена emergencyAddress на bob
+    ✔ 2. событие EmergencyAddressChanged
+    ✔ 3. ZeroAddress ревертит
+    ✔ 4. InvalidAddress = contract
+    ✔ 5. BadVaultId
+    ✔ 6. WrongCode на recovery
+    ✔ 7. Locked (voluntaryLock)
+    ✔ 8. ContractPaused ревертит
+
+  AnchorVaultV43 — welcomeBonus
+    ✔ 1. setWelcomeBonus только creator
+    ✔ 2. NotCreator ревертит
+    ✔ 3. BonusExceedsLimit
+    ✔ 4. WelcomeBonusChanged событие
+    ✔ 5. бонус выплачивается при openVault
+    ✔ 6. бонус не выплачивается дважды
+    ✔ 7. бонус не выплачивается если bonus=0
+
+  AnchorVaultV43 — donateToRewardPool
+    ✔ 1. донат ANCR работает
+    ✔ 2. событие RewardPoolDonated
+    ✔ 3. TokenNotSupported
+    ✔ 4. InvalidAmount (0)
+    ✔ 5. донат от разных пользователей накапливается
+    ✔ 6. donateToRewardPool с FOT после добавления
+
+  AnchorVaultV43 — roles
+    ✔ 10. старый creator теряет права после accept
+    ✔ 11. Guardian не может быть creator
+    ✔ 12. acceptGuardianship сбрасывает pendingGuardian
+    ✔ 13. старый creator не может withdrawCreatorFees после смены
+    ✔ 10. старый creator теряет права после accept
+    ✔ 11. acceptCreatorship сбрасывает pending
+    ✔ 12. acceptGuardianship сбрасывает pendingGuardian
+    ✔ 13. transferCreatorship обновляет таймер при повторном
+    Creatorship
+      ✔ 1. transferCreatorship только creator
+      ✔ 2. NotCreator ревертит
+      ✔ 3. ZeroAddress ревертит
+      ✔ 4. CreatorshipTransferRequested событие
+      ✔ 5. acceptCreatorship только pending
+      ✔ 6. CooldownNotExpired до 7 дней
+      ✔ 7. успех через 7 дней
+    Guardianship
+      ✔ 8. transferGuardianship только creator
+      ✔ 9. acceptGuardianship через 2 дня
+
+  AnchorVaultV43 — pause
+    ✔ 1. requestPause только guardian
+    ✔ 2. NotGuardian ревертит
+    ✔ 3. PauseRequested событие
+    ✔ 4. AdminRequestPending при двойном request
+    ✔ 5. cancelPauseRequest работает
+    ✔ 6. PauseTimeoutNotReached до 2 дней
+    ✔ 7. executePause через 2 дня
+    ✔ 8. emergencyPause мгновенно
+    ✔ 9. unpause только creator
+    ✔ 10. ContractPaused блокирует openVault
+    ✔ 11. earlyClose работает при paused
+    ✔ 12. cancelPauseRequest сбрасывает таймер
+    ✔ 11. earlyClose работает при paused
+    ✔ 12. cancelPauseRequest сбрасывает таймер
+    ✔ 13. PauseStateChanged событие при emergencyPause
+
+  AnchorVaultV43 — creatorWithdraw
+    ✔ 1. requestCreatorWithdraw только creator
+    ✔ 2. NotCreator ревертит
+    ✔ 3. ZeroAddress to ревертит
+    ✔ 4. InvalidAmount (0) ревертит
+    ✔ 5. withdrawCreatorFees успех через 7 дней
+    ✔ 6. cancelCreatorWithdraw работает
+
+  AnchorVaultV43 — reserveWithdraw
+    ✔ 1. requestReserveWithdraw только creator
+    ✔ 2. NotCreator ревертит
+    ✔ 3. withdrawReserve успех через 7 дней
+    ✔ 4. cancelReserveWithdraw работает
+
+  AnchorVaultV43 — failedAttempts
+    ✔ 1. failCount растёт при wrong коде
+    ✔ 2. WrongCodeAttempt событие
+    ✔ 3. SOFT_LOCK после 5 попыток
+    ✔ 4. HARD_LOCK после 30 попыток (85ms)
+    ✔ 5. TooManyAttempts без интервала
+    ✔ 6. правильный код сбрасывает failCount
+    ✔ 7. totalFailedAttempts растёт
+    ✔ 8. Locked блокирует после SOFT_LOCK
+    ✔ 9. фейлы alice не влияют на bob
+    ✔ 10. resetFailedAttempts после 30 дней
+    ✔ 11. totalFailedAttempts = 5 после 5 неверных попыток
+    ✔ 12. WrongCodeAttempt событие при каждом неверном коде
+    ✔ 13. failCount сбрасывается rotateCodes
+    ✔ 14. totalFailedAttempts = 5 после 5 неверных попыток
+    ✔ 15. FailedAttempt событие при SOFT_LOCK
+
+  AnchorVaultV43 — views
+    ✔ 1. getVaultCore возвращает данные
+    ✔ 2. getVaultTimings возвращает данные
+    ✔ 3. getVaultSecurity возвращает failCount
+    ✔ 4. BadVaultId на getVaultCore
+    ✔ 5. VERSION = 43
+    ✔ 6. getMaxTimelockForLevel
+    ✔ 7. getDepositFeeForLevel
+    ✔ 8. supportedTokens
+    ✔ 9. public константы
+    ✔ 10. начальное состояние маппингов
+    ✔ 11. getAntiPhishHash возвращает хеш
+    ✔ 12. activeVaultId после открытия
+    ✔ 13. getAntiPhishHash не нулевой после openVault
+    ✔ 14. activeVaultId возвращает 0 для нового пользователя
+    ✔ 15. userVaultCount возвращает 0 для нового пользователя
+    ✔ 16. paused = false на старте
+
+  AnchorVaultV43 — penalty
+    ✔ 1. PenaltyDistributed при withdraw ANCR
+    ✔ 2. totalBurnedANCR растёт при withdraw ANCR
+    ✔ 3. strategicReserve пополняется
+    ✔ 4. rewardPool пополняется
+    ✔ 5. creatorFees пополняется
+    ✔ 6. earlyClose распределяет penalty
+    ✔ 7. emergencyAny распределяет penalty
+    ✔ 8. recoverToSafe распределяет penalty
+    ✔ 9. penalty при transfer ANCR
+    ✔ 10. totalBurnedANCR только растёт
+    ✔ 11. creatorFees накапливаются от разных операций
+    ✔ 12. стратегический резерв накапливается
+    ✔ 13. rewardPool накапливается от штрафов
+    ✔ 14. PenaltyDistributed содержит все 4 компонента
+
+  AnchorVaultV43 — FOT
+    ✔ 1. openVault с FOT после добавления
+    ✔ 2. deposit FOT работает
+    ✔ 3. withdraw FOT работает
+    ✔ 4. donate FOT работает
+    ✔ 5. transfer FOT работает
+
+  AnchorVaultV43 — defenseETH
+    ✔ 1. receive() ревертит
+    ✔ 2. fallback() ревертит
+    ✔ 3. баланс ETH = 0
+
+  AnchorVaultV43 — edgeCases
+    ✔ 1. открыть-закрыть-открыть
+    ✔ 2. userVaultCount растёт
+    ✔ 3. депозит-вывод-депозит
+    ✔ 4. transfer-обратно не возможен
+    ✔ 5. все 3 уровня работают
+    ✔ 6. approve без openVault не даёт сейф
+    ✔ 7. нельзя депозит в чужой сейф
+    ✔ 8. transfer после снятия voluntaryLock
+    ✔ 9. openVault после donate с тем же токеном
+    ✔ 8. transfer после снятия voluntaryLock
+    ✔ 9. openVault после donate с тем же токеном
+    ✔ 10. approve без openVault не даёт сейф
+    ✔ 11. нельзя депозит в чужой сейф
+
+  AnchorVaultV44 — Global Emergency
+    setGlobalEmergency
+      ✔ 1. устанавливается успешно (47ms)
+      ✔ 2. событие GlobalEmergencySet
+      ✔ 3. getGlobalEmergency view возвращает адрес
+      ✔ 4. revert ZeroAddress на 0x0
+      ✔ 5. revert InvalidAddress если == msg.sender
+      ✔ 6. revert InvalidAddress если == address(this)
+      ✔ 7. revert EmergencyAlreadySet при повторной установке
+      ✔ 8. Разные юзеры устанавливают независимо
+    Использование в openVault
+      ✔ 9. openVault revert NoEmergencySet без установленного
+      ✔ 10. openVault использует globalEmergency как vault.emergencyAddress
+      ✔ 11. Несколько сейфов имеют одинаковый emergencyAddress
+
+  AnchorVaultV43 — ReentrancyGuard
+    ✔ 1. nonReentrant на withdraw защищает
+    ✔ 2. nonReentrant на deposit защищает
+    ✔ 3. nonReentrant на openVault защищает
+    ✔ 4. nonReentrant на transfer защищает
+    ✔ 5. nonReentrant на earlyClose/recover/emergency
+
+  AnchorVaultV44 — Panic Withdraw
+    Успешные сценарии
+      ✔ 1. базовый panic — 20% штраф, на globalEmergency (60ms)
+      ✔ 2. событие PanicWithdraw
+      ✔ 3. v.status = 2 после panic
+      ✔ 4. activeVaultIdByToken очищен
+      ✔ 5. v.amount = 0
+      ✔ 6. lockedPrincipal уменьшен
+      ✔ 7. PenaltyDistributed
+      ✔ 8. Работает даже при voluntaryLockUntil > now (СПАСАТЕЛЬНАЯ КНОПКА)
+      ✔ 9. Работает после неудачных попыток
+    Реверты
+      ✔ 10. revert BadVaultId на несуществующий vault
+      ✔ 11. revert NotActive если vault уже закрыт
+    Мульти-токен
+      ✔ 12. panic ANCR-сейфа не влияет на FOT-сейф юзера
+      ✔ 13. После panic ANCR можно открыть новый ANCR-сейф
+
+  AnchorVaultV43 — Инварианты
+    ✔ 1. lockedPrincipal = сумма vault.amount после openVault
+    ✔ 2. lockedPrincipal = сумма vault.amount после deposit
+    ✔ 3. lockedPrincipal уменьшается при withdraw
+    ✔ 4. userVaultCount >= activeVaultId для всех
+    ✔ 5. totalBurnedANCR только растёт
+    ✔ 6. penalty sum = burn + creator + reserve + reward
+    ✔ 7. status только 0 или 1
+    ✔ 8. VERSION всегда 43
+    ✔ 9. MIN_DEPOSIT константа
+    ✔ 10. supportedTokens[ANCR] всегда true
+
+  AnchorVaultV44 — Panic Withdraw
+    Успешные сценарии
+      ✔ 1. базовый panic — 20% штраф, на globalEmergency (60ms)
+      ✔ 2. событие PanicWithdraw
+      ✔ 3. v.status = 2 после panic
+      ✔ 4. activeVaultIdByToken очищен
+      ✔ 5. v.amount = 0
+      ✔ 6. lockedPrincipal уменьшен
+      ✔ 7. PenaltyDistributed
+      ✔ 8. Работает даже при voluntaryLockUntil > now (СПАСАТЕЛЬНАЯ КНОПКА)
+      ✔ 9. Работает после неудачных попыток
+    Реверты
+      ✔ 10. revert BadVaultId на несуществующий vault
+      ✔ 11. revert NotActive если vault уже закрыт
+    Мульти-токен
+      ✔ 12. panic ANCR-сейфа не влияет на FOT-сейф юзера
+      ✔ 13. После panic ANCR можно открыть новый ANCR-сейф
+
+  AnchorVaultV43 — Gas
+    ✔ 1. openVault газ < 300k
+    ✔ 2. deposit газ < 150k
+    ✔ 3. withdraw газ < 200k
+    ✔ 4. transfer газ < 350k
+    ✔ 5. emergencyAny газ < 250k
+
+  V44 — Secure Transfer: Init
+    ✔ 1. initSecureTransfer создаёт pending transfer (61ms)
+    ✔ 2. Vault получает status = 1 (FROZEN_FOR_TRANSFER)
+    ✔ 3. событие SecureTransferInitiated
+    ✔ 4. revert NoEmergencySet у получателя
+    ✔ 5. revert WeakCode на короткий confirmCode
+    ✔ 6. revert VaultLimitReached если у получателя есть сейф этого токена
+    ✔ 7. revert TransferAlreadyExists если у получателя уже есть pending
+    ✔ 8. revert NotActive если vault уже FROZEN
+
+  AnchorVaultV43 — Fuzzing
+    ✔ 1. случайная последовательность: open-deposit-withdraw
+    ✔ 2. открыть-перевести-вывести у получателя
+    ✔ 3. депозит-закрыть-открыть новый-депозит
+    ✔ 4. recoverToSafe после депозита
+    ✔ 5. rotateCodes → депозит с новым кодом
+    ✔ 6. voluntaryLock → не можем вывести → снимаем лок → выводим
+    ✔ 7. два перевода подряд
+    ✔ 8. пауза → операции ревертят → unpause → работают
+    ✔ 9. welcomeBonus + deposit + withdraw
+    ✔ 10. emergencyAny на разных адресах
+
+  V44 — Secure Transfer: Confirm
+    ✔ 1. confirm передаёт сейф получателю (64ms)
+    ✔ 2. событие SecureTransferConfirmed
+    ✔ 3. неверный код → failCount++
+    ✔ 4. 3 неверные попытки → EXPIRED
+    ✔ 5. revert AttemptTooSoon
+    ✔ 6. revert TransferExpired после 48 часов
+
+  AnchorVaultV43 — DoS атаки
+    ✔ 1. массовое открытие/закрытие сейфов одним пользователем (104ms)
+    ✔ 2. множество пользователей создают сейфы — изоляция (64ms)
+    ✔ 3. атака повторными failedAttempts не блокирует других
+    ✔ 4. voluntaryLock — только сам пользователь страдает
+    ✔ 5. защита от переполнения vaultId (787ms)
+    ✔ 6. deposit/withdraw в цикле не исчерпывает газ (117ms)
+    ✔ 7. нельзя удалить ANCR из supportedTokens
+    ✔ 8. прямой вызов fallback/receive всегда реверт
+    ✔ 9. только guardian может pause
+    ✔ 10. rotateCodes с неправильными кодами не ломает систему
+
+  V44 — Secure Transfer: Cancel/Reclaim
+    ✔ 1. отправитель отменяет → сейф ACTIVE (70ms)
+    ✔ 2. событие SecureTransferCancelled
+    ✔ 3. reclaimExpired через 48 часов
+    ✔ 4. revert NotTransferSender если не отправитель
+    ✔ 5. revert TransferStillValid если раньше 48 часов
+
+  AnchorVaultV43 — Stress
+    ✔ 1. 50 открытий/закрытий подряд (375ms)
+    ✔ 2. 30 депозитов подряд в один сейф (88ms)
+    ✔ 3. 30 выводов подряд из одного сейфа (60ms)
+    ✔ 4. 10 переводов по цепочке
+    ✔ 5. параллельные операции 5 пользователей (60ms)
+    ✔ 6. восстановление после 35 failedAttempts через rotateCodes (94ms)
+    ✔ 7. пауза не блокирует earlyClose/recover/emergency
+    ✔ 8. welcomeBonus выплачивается 10 разным пользователям (73ms)
+    ✔ 9. donate + withdraw из rewardPool через welcomeBonus
+    ✔ 10. смена ролей 5 раз подряд
+
+  AnchorVaultV43 — Invariant Math
+    ✔ 1. penalty = burn + creator + reserve + reward для ANCR
+    ✔ 2. burn = 20% от penalty для ANCR
+    ✔ 3. creatorFees = 25% от penalty для ANCR
+    ✔ 4. reserve = 20% от penalty для ANCR
+    ✔ 5. rewardPool получает остаток от penalty
+    ✔ 6. totalBurnedANCR монотонно растёт
+    ✔ 7. lockedPrincipal = vault.amount для одиночного сейфа
+    ✔ 8. после withdraw: lockedPrincipal уменьшается на amount
+    ✔ 9. после deposit: lockedPrincipal увеличивается на net
+    ✔ 10. penalty при transfer = 0.5% от amount
+
+  AnchorVaultV43 — Boundary Values
+    ✔ 1. code ровно 10 символов проходит
+    ✔ 2. code ровно 64 символа проходит
+    ✔ 3. code 9 символов ревертит WeakCode
+    ✔ 4. code 65 символов ревертит CodeTooLong
+    ✔ 5. amount = MIN_DEPOSIT ровно ревертит (net < MIN после fee)
+    ✔ 6. amount = MIN_DEPOSIT + 1% (net >= MIN после fee) проходит
+    ✔ 7. withdraw 1 wei работает
+    ✔ 8. withdraw всего кроме 1 wei работает
+    ✔ 9. name пустая строка работает
+    ✔ 10. name 64 символа работает
+
+  AnchorVaultV43 — Timelock Boundary
+    ✔ 1. SAFE max timelock = 0
+    ✔ 2. VAULT max timelock = 72
+    ✔ 3. FORTRESS max timelock = 168
+    ✔ 4. VAULT: 72 часа проходит
+    ✔ 5. VAULT: 73 часа ревертит
+    ✔ 6. FORTRESS: 168 часов проходит
+    ✔ 7. FORTRESS: 169 часов ревертит
+    ✔ 8. voluntaryLock ровно через 1 минуту проходит
+    ✔ 9. voluntaryLock ровно MAX (5 лет) проходит
+    ✔ 10. voluntaryLock > 5 лет ревертит
+
+  AnchorVaultV43 — Access Matrix
+    ✔ 1. только creator может addSupportedToken
+    ✔ 2. только guardian может emergencyPause
+    ✔ 3. только владелец может withdraw из своего сейфа
+    ✔ 4. только creator может setWelcomeBonus
+    ✔ 5. только pendingCreator может acceptCreatorship
+    ✔ 6. только pendingGuardian может acceptGuardianship
+    ✔ 7. никто не может удалить ANCR из supportedTokens
+    ✔ 8. любой может donateToRewardPool на supported токен
+    ✔ 9. только creator может unpause
+    ✔ 10. только creator может requestCreatorWithdraw
+
+  AnchorVaultV43 — Events Coverage
+    ✔ 1. TokenSupported при addSupportedToken
+    ✔ 2. TokenUnsupported при removeSupportedToken
+    ✔ 3. WelcomeBonusChanged при setWelcomeBonus
+    ✔ 4. RewardPoolDonated при donateToRewardPool
+    ✔ 5. CreatorshipTransferRequested
+    ✔ 6. CreatorshipAccepted
+    ✔ 7. GuardianshipTransferRequested
+    ✔ 8. GuardianshipAccepted
+    ✔ 9. PauseRequested + PauseRequestCancelled
+    ✔ 10. CreatorWithdrawn + ReserveWithdrawn
+
+  AnchorVaultV43 — Multi-User Isolation
+    ✔ 1. 20 пользователей одновременно открывают сейфы (105ms)
+    ✔ 2. депозит alice не влияет на баланс bob
+    ✔ 3. вывод alice не влияет на баланс bob
+    ✔ 4. перевод между пользователями изолирован
+    ✔ 5. failedAttempts alice не влияют на bob
+    ✔ 6. voluntaryLock alice не блокирует bob
+    ✔ 7. welcomeBonus alice не забирает бонус bob
+    ✔ 8. totalFailedAttempts alice не смешивается с bob
+    ✔ 9. activeVaultId изолирован между пользователями
+    ✔ 10. userVaultCount независим для каждого
+
+  AnchorVaultV43 — Fee Precision
+    ✔ 1. OPEN_VAULT_FEE_BPS = 20
+    ✔ 2. WITHDRAW_FEE_BPS = 50
+    ✔ 3. TRANSFER_FEE_BPS = 50
+    ✔ 4. EARLY_CLOSE_FEE_BPS = 500
+    ✔ 5. RECOVER_TO_SAFE_FEE_BPS = 1000
+    ✔ 6. EMERGENCY_ANY_FEE_BPS = 1500
+    ✔ 7. SAFE deposit fee = 50
+    ✔ 8. VAULT deposit fee = 150
+    ✔ 9. FORTRESS deposit fee = 200
+    ✔ 10. all fees sum check: open=20, withdraw=50, early=500, recover=1000, emergency=1500
+
+  AnchorVaultV43 — Constants
+    ✔ 1. VERSION = 43
+    ✔ 2. MIN_CODE_LENGTH = 10
+    ✔ 3. MAX_CODE_LENGTH = 64
+    ✔ 4. MIN_DEPOSIT = 10^16
+    ✔ 5. MAX_WELCOME_BONUS = MIN_DEPOSIT / 2
+    ✔ 6. PAUSE_DELAY = 2 days
+    ✔ 7. ADMIN_WITHDRAW_TIMELOCK = 7 days
+    ✔ 8. CREATOR_COOLDOWN = 7 days
+    ✔ 9. GUARDIAN_COOLDOWN = 2 days
+    ✔ 10. FROZEN_PERIOD = 7 days
+
+  AnchorVaultV43 — Withdraw Edge
+    ✔ 1. вывод после открытия без депозита
+    ✔ 2. вывод разными суммами 10 раз
+    ✔ 3. вывод на разные адреса работает
+    ✔ 4. вывод после rotateCodes
+    ✔ 5. вывод после transfer от другого
+    ✔ 6. вывод всей суммы кроме комиссии
+    ✔ 7. вывод 0 ревертит
+    ✔ 8. вывод больше баланса ревертит
+    ✔ 9. вывод на адрес 0 ревертит
+    ✔ 10. вывод на контракт ревертит
+
+  AnchorVaultV43 — OpenVault Fuzzing
+    ✔ 1. открыть 3 сейфа разных уровней одним пользователем
+    ✔ 2. открыть сейф с разными суммами (50ms)
+    ✔ 3. emergencyAddress разные для каждого сейфа
+    ✔ 4. имена сейфов разные
+    ✔ 5. openVault после donateToRewardPool
+    ✔ 6. openVault после welcomeBonus
+    ✔ 7. openVault с FOT токеном
+    ✔ 8. openVault → deposit → withdraw → close
+    ✔ 9. openVault → transfer → withdraw у получателя
+    ✔ 10. openVault → rotateCodes → deposit с новым кодом
+
+  AnchorVaultV43 — Penalty Distribution
+    ✔ 1. PEN_BURN_BPS_ANCR = 2000
+    ✔ 2. PEN_CREATOR_BPS_ANCR = 2500
+    ✔ 3. PEN_RESERVE_BPS_ANCR = 2000
+    ✔ 4. PEN_CREATOR_BPS_OTHER = 4000
+    ✔ 5. PEN_RESERVE_BPS_OTHER = 4000
+    ✔ 6. ANCR penalty sum = 2000+2500+2000+3500 = 10000
+    ✔ 7. non-ANCR penalty sum = 0+4000+4000+2000 = 10000
+    ✔ 8. totalBurnedANCR растёт при earlyClose
+    ✔ 9. totalBurnedANCR не растёт при выводе FOT
+    ✔ 10. все penalty константы > 0
+
+  AnchorVaultV43 — Soft/Hard Locks
+    ✔ 2. HARD_LOCK_THRESHOLD = 30
+    ✔ 3. AUTO_EMERGENCY_THRESHOLD = 35
+    ✔ 4. MAX_TOTAL_ATTEMPTS = 50
+    ✔ 5. SOFT_LOCK = 1 час
+    ✔ 6. SOFT_LOCK снимается через 1 час
+    ✔ 7. HARD_LOCK = 7 дней (88ms)
+    ✔ 8. MIN_GLOBAL_ATTEMPT_INTERVAL = 60
+    ✔ 9. TooManyAttempts при вызове без интервала
+    ✔ 10. FAIL_COUNTER_RESET_PERIOD = 30 дней
+
+  AnchorVaultV43 — Transfer Fuzzing
+    ✔ 1. transfer → withdraw → открыть новый
+    ✔ 2. transfer → deposit → transfer обратно нельзя
+    ✔ 3. transfer → rotateCodes → withdraw
+    ✔ 4. transfer с code=64 символа
+    ✔ 5. transfer → earlyClose новым владельцем
+    ✔ 6. transfer → recoverToSafe новым владельцем
+    ✔ 7. transfer → emergencyAny новым владельцем
+    ✔ 8. цепочка из 5 transfer'ов
+    ✔ 9. transfer после setVoluntaryLock ревертит
+    ✔ 10. transfer на адрес с активным сейфом ревертит
+    ✔ 11. статус 0 после открытия, 1 после закрытия
+
+  AnchorVaultV43 — Emergency Scenarios
+    ✔ 1. earlyClose после SOFT_LOCK (через 1 час)
+    ✔ 2. recoverToSafe во время паузы
+    ✔ 3. emergencyAny на себя (не msg.sender)
+    ✔ 4. пауза → unpause → операции работают
+    ✔ 5. rotateCodes после HARD_LOCK (80ms)
+    ✔ 6. все 3 emergency операции подряд
+    ✔ 7. earlyClose после welcomeBonus
+    ✔ 8. emergencyAny на адрес 0xdead
+    ✔ 9. recoverToSafe → earlyClose нельзя (уже закрыт)
+    ✔ 10. emergencyAny с пустой antiPhrase ревертит
+
+  AnchorVaultV43 — State Transitions
+    ✔ 1. ACTIVE → CLOSED через withdraw
+    ✔ 2. ACTIVE → CLOSED через earlyClose
+    ✔ 3. ACTIVE → CLOSED через recoverToSafe
+    ✔ 4. ACTIVE → CLOSED через emergencyAny
+    ✔ 5. ACTIVE → ACTIVE после transfer
+    ✔ 6. CLOSED → нельзя deposit
+    ✔ 7. CLOSED → нельзя withdraw
+    ✔ 8. CLOSED → нельзя transfer
+    ✔ 9. CLOSED → можно открыть новый
+    ✔ 10. paused → unpaused → paused → unpaused
+
+  AnchorVaultV43 — Welcome Bonus Fuzzing
+    ✔ 1. welcomeBonus = 0.005 (MAX) проходит
+    ✔ 2. welcomeBonus > MAX ревертит
+    ✔ 3. welcomeBonus выплачивается 10 разным адресам (74ms)
+    ✔ 4. после donate bonus выплачивается
+    ✔ 5. welcomeBonusClaimed не сбрасывается после второго сейфа
+    ✔ 6. setWelcomeBonus(0) выключает бонус
+    ✔ 7. bonus не выплачивается если bonus=0
+    ✔ 8. WelcomeBonusPaid событие при выплате
+    ✔ 10. WelcomeBonusChanged событие
+
+  AnchorVaultV43 — Role Transfer Fuzzing
+    ✔ 1. transferCreatorship → cancel (переопределить)
+    ✔ 2. acceptCreatorship до cooldown ревертит
+    ✔ 3. acceptGuardianship до cooldown ревертит
+    ✔ 4. transferCreatorship → accept → transfer ещё раз
+    ✔ 5. старый creator не может unpause после смены
+    ✔ 6. новый creator может всё
+    ✔ 7. transferGuardianship на нулевой адрес ревертит
+    ✔ 8. transferCreatorship на себя ревертит
+    ✔ 9. transferGuardianship на creator ревертит
+    ✔ 10. двойной acceptCreatorship ревертит
+
+  AnchorVaultV43 — FOT Fuzzing
+    ✔ 1. openVault с FOT: amount < sent из-за 1% fee
+    ✔ 2. deposit FOT: received < sent
+    ✔ 3. withdraw FOT: корректный вывод
+    ✔ 4. transfer FOT: корректный перевод
+    ✔ 5. donate FOT: rewardPool пополняется
+    ✔ 6. FOT: penalty без burn части
+    ✔ 7. FOT: earlyClose работает
+    ✔ 8. FOT: recoverToSafe работает
+    ✔ 9. FOT: emergencyAny работает
+    ✔ 10. FOT: lockedPrincipal корректный
+
+  AnchorVaultV43 — Welcome Bonus Fuzzing
+    ✔ 1. welcomeBonus = 0.005 (MAX) проходит
+    ✔ 2. welcomeBonus > MAX ревертит
+    ✔ 3. welcomeBonus выплачивается 10 разным адресам (79ms)
+    ✔ 4. после donate bonus выплачивается
+    ✔ 5. welcomeBonusClaimed не сбрасывается после второго сейфа
+    ✔ 6. setWelcomeBonus(0) выключает бонус
+    ✔ 7. bonus не выплачивается если bonus=0
+    ✔ 8. WelcomeBonusPaid событие при выплате
+    ✔ 10. WelcomeBonusChanged событие
+
+  AnchorVaultV43 — Deposit Fuzzing
+    ✔ 1. депозит минимальной суммы (0.01)
+    ✔ 2. депозит 1000 токенов
+    ✔ 3. 10 депозитов подряд (41ms)
+    ✔ 4. депозит после частичного вывода
+    ✔ 5. депозит после rotateCodes
+    ✔ 6. депозит во время voluntaryLock ревертит
+    ✔ 7. депозит на закрытый сейф ревертит
+    ✔ 8. депозит в несуществующий сейф ревертит
+    ✔ 9. депозит с неверным кодом — amount не меняется
+    ✔ 10. депозит 0 ревертит
+
+  AnchorVaultV43 — Recovery Scenarios
+    ✔ 1. recoverToSafe после 5 failed попыток
+    ✔ 2. emergencyAny после HARD_LOCK (79ms)
+    ✔ 3. earlyClose после депозита и вывода
+    ✔ 4. recoverToSafe → открыть новый → earlyClose
+    ✔ 5. emergencyAny на тот же адрес дважды
+    ✔ 6. все три recovery операции подряд для одного пользователя
+    ✔ 7. earlyClose с минимальной суммой после комиссий
+    ✔ 8. recoverToSafe с FOT токеном
+    ✔ 9. emergencyAny с FOT токеном
+    ✔ 10. earlyClose с FOT токеном
+
+  AnchorVaultV43 — Timelock Fuzzing
+    ✔ 1. SAFE: только 0 проходит
+    ✔ 2. VAULT: все значения 0..72 проходят
+    ✔ 3. FORTRESS: все значения 0..168 проходят
+    ✔ 4. voluntaryLock блокирует deposit
+    ✔ 5. voluntaryLock блокирует rotateCodes
+    ✔ 6. voluntaryLock блокирует changeEmergencyAddress
+    ✔ 7. voluntaryLock после снятия — операции работают
+    ✔ 8. TimelockSet событие
+    ✔ 9. VoluntaryLockSet событие
+    ✔ 10. повторный setTimelock перезаписывает значение
+
+  AnchorVaultV43 — View Fuzzing
+    ✔ 1. getVaultCore после открытия
+    ✔ 2. getVaultCore после закрытия
+    ✔ 3. getVaultTimings после openVault
+    ✔ 4. getVaultSecurity после failedAttempts
+    ✔ 5. getAntiPhishHash не нулевой
+    ✔ 6. getMaxTimelockForLevel для всех уровней
+    ✔ 7. getDepositFeeForLevel для всех уровней
+    ✔ 8. userVaultCount после нескольких сейфов
+    ✔ 9. activeVaultId после закрытия = 0
+    ✔ 10. totalBurnedANCR после операций
+
+  AnchorVaultV43 — Comprehensive
+    ✔ 1. полный цикл: open → deposit → withdraw → transfer → close
+    ✔ 2. два сейфа у одного пользователя последовательно
+    ✔ 3. перевод с последующим закрытием получателем через emergencyAny
+    ✔ 4. погашение SOFT_LOCK через успешный earlyClose
+    ✔ 5. welcomeBonus + donate + открытие несколькими пользователями
+    ✔ 6. перевод во время voluntaryLock ревертит, после снятия проходит
+    ✔ 7. пауза → emergencyAny → unpause → withdraw
+    ✔ 8. смена guardian во время паузы
+    ✔ 10. 5 failedAttempts → rotateCodes → сброс failCount → успешный вывод
+
+  AnchorVaultV43 — Final Edge
+    ✔ 1. MIN_DEPOSIT ровно 0.01
+    ✔ 2. нельзя openVault с amount = 0
+    ✔ 3. withdraw 1 wei работает
+    ✔ 4. нельзя withdraw из чужого сейфа
+    ✔ 5. antiPhrase пустая ревертит
+    ✔ 6. WrongCode на antiPhrase ревертит
+    ✔ 7. нельзя deposit в vid=0
+    ✔ 8. openVault с code=10 символов проходит
+    ✔ 9. openVault с code=64 символа проходит
+    ✔ 10. setTimelock SAFE > 0 ревертит
+
+  AnchorVaultV43 — Final Edge
+    ✔ 1. MIN_DEPOSIT ровно 0.01
+    ✔ 2. нельзя openVault с amount = 0
+    ✔ 3. withdraw 1 wei работает
+    ✔ 4. нельзя withdraw из чужого сейфа
+    ✔ 5. antiPhrase пустая ревертит
+    ✔ 6. WrongCode на antiPhrase ревертит
+    ✔ 7. нельзя deposit в vid=0
+    ✔ 8. openVault с code=10 символов проходит
+    ✔ 9. openVault с code=64 символа проходит
+    ✔ 10. setTimelock SAFE > 0 ревертит
+
+  AnchorVaultV43 — Final Fuzzing
+    ✔ 1. openVault с code ровно 10 символов проходит
+    ✔ 2. openVault с code ровно 64 символа проходит
+    ✔ 3. setTimelock на SAFE > 0 ревертит
+    ✔ 4. setTimelock на VAULT = 72 проходит
+    ✔ 5. setTimelock на FORTRESS = 168 проходит
+    ✔ 6. deposit во время паузы ревертит
+    ✔ 7. withdraw во время паузы ревертит
+    ✔ 8. openVault во время паузы ревертит
+    ✔ 9. transfer во время паузы ревертит
+    ✔ 10. earlyClose работает во время паузы
+
+  AnchorVaultV43 — Hacker Attacks
+    ✔ 1. атака: подбор кода через перебор (должен заблокироваться)
+    ✔ 2. атака: попытка вывести на адрес контракта
+    ✔ 3. атака: transfer на себя
+    ✔ 4. атака: попытка сменить emergencyAddress на себя
+    ✔ 5. атака: открыть сейф с emergencyAddress = contract
+    ✔ 6. атака: попытка использовать чужой vaultId
+    ✔ 7. атака: deposit в чужой сейф
+    ✔ 8. атака: попытка перевести сейф на contract
+    ✔ 9. атака: попытка earlyClose с чужим recovery
+    ✔ 10. атака: попытка emergencyAny с неверной antiPhrase
+    ✔ 11. атака: подбор antiPhrase через перебор
+    ✔ 12. атака: попытка открыть сейф с code=9 символов
+    ✔ 13. атака: code=65 символов
+    ✔ 14. атака: deposit с amount=0
+    ✔ 15. атака: withdraw с amount=0
+    ✔ 16. атака: withdraw больше баланса
+    ✔ 17. атака: transfer на address(0)
+    ✔ 18. атака: emergencyAny на address(0)
+    ✔ 19. атака: emergencyAny на контракт
+    ✔ 20. атака: перевод ETH на контракт через selfdestruct (если бы)
+
+  AnchorVaultV43 — Frontrun Attacks
+    ✔ 1. фронтран: нельзя подменить to в transfer
+    ✔ 2. фронтран: antiPhish защищает от подмены получателя
+    ✔ 3. фронтран: нельзя подменить сумму вывода
+    ✔ 4. фронтран: нельзя подменить emergencyAddress при открытии
+    ✔ 5. фронтран: нельзя изменить коды при transfer
+    ✔ 6. фронтран: timelock на admin операции защищает от мгновенного вывода
+    ✔ 7. фронтран: cooldown на смену creator защищает
+    ✔ 8. фронтран: пауза с задержкой (не emergency)
+    ✔ 9. фронтран: нельзя отменить чужой requestPause
+    ✔ 10. фронтран: нельзя выполнить чужой acceptCreatorship
+    ✔ 11. фронтран: нельзя подменить token в openVault
+    ✔ 12. фронтран: нельзя подменить level в openVault
+    ✔ 13. фронтран: rotateCodes требует старый код
+    ✔ 14. фронтран: нельзя подделать salt (хеши разные для разных vault)
+    ✔ 15. фронтран: комиссии защищены — нельзя вывести без комиссии
+    ✔ 16. фронтран: нельзя обойти SOFT_LOCK через смену адреса
+    ✔ 17. фронтран: нельзя украсть через earlyClose (только владелец получает средства)
+    ✔ 18. фронтран: нельзя подменить vaultId через front-run
+    ✔ 19. фронтран: antiPhish проверяется до основного кода
+    ✔ 20. фронтран: emergency пауза мгновенная (не требует задержки)
+
+  AnchorVaultV43 — Reentrancy Deep
+    ✔ 1. nonReentrant на openVault
+    ✔ 2. nonReentrant на deposit
+    ✔ 3. nonReentrant на withdraw
+    ✔ 4. nonReentrant на transfer
+    ✔ 5. nonReentrant на earlyClose
+    ✔ 6. nonReentrant на recoverToSafe
+    ✔ 7. nonReentrant на emergencyAny
+    ✔ 8. nonReentrant на rotateCodes
+    ✔ 9. атака через cross-function reentrancy: withdraw → deposit
+    ✔ 10. атака через cross-function: transfer → emergencyAny
+    ✔ 11. защита: donateToRewardPool не вызывает reentrancy
+    ✔ 12. защита: setWelcomeBonus не reentrant
+    ✔ 13. защита: addSupportedToken не reentrant
+    ✔ 14. защита: changeEmergencyAddress после withdraw
+    ✔ 15. защита: setTimelock после deposit
+    ✔ 16. защита: resetFailedAttempts после SOFT_LOCK
+    ✔ 17. reentrancy через receive() невозможна
+    ✔ 18. reentrancy через fallback() невозможна
+    ✔ 19. нельзя вызвать функции через delegatecall (EVM уровень)
+    ✔ 20. нельзя повторно инициализировать (нет initialize)
+
+  AnchorVaultV43 — Flashloan Attacks
+    ✔ 1. flashloan: нельзя манипулировать lockedPrincipal через временный депозит
+    ✔ 2. flashloan: нельзя украсть через transfer+withdraw в одном блоке
+    ✔ 3. flashloan: donate → openVault с бонусом → earlyClose (нельзя украсть бонус)
+    ✔ 4. flashloan: нельзя обойти комиссию через transfer туда-обратно
+    ✔ 5. flashloan: нельзя манипулировать rewardPool через повторный donate+withdraw
+    ✔ 6. flashloan: нельзя использовать emergencyAny для вывода без комиссии
+    ✔ 7. flashloan: нельзя обойти SOFT_LOCK через transfer
+    ✔ 8. flashloan: нельзя манипулировать totalBurnedANCR
+    ✔ 9. flashloan: нельзя изменить уровень сейфа после открытия
+    ✔ 10. flashloan: нельзя украсть токены через паузу
+    ✔ 11. flashloan: нельзя обойти MIN_DEPOSIT через deposit 0
+    ✔ 12. flashloan: нельзя создать сейф с amount < MIN_DEPOSIT
+    ✔ 13. flashloan: нельзя украсть через earlyClose с чужим recovery
+    ✔ 14. flashloan: нельзя подменить коды через front-run rotateCodes
+    ✔ 15. flashloan: нельзя атаковать через delegatecall (нет delegatecall в контракте)
+    ✔ 16. flashloan: emergencyAny требует antiPhrase
+    ✔ 17. flashloan: нельзя обойти voluntaryLock через emergencyAny
+    ✔ 18. flashloan: нельзя обойти voluntaryLock через recoverToSafe
+    ✔ 19. flashloan: нельзя обойти voluntaryLock через earlyClose
+    ✔ 20. flashloan: все emergency операции с разных адресов не пересекаются
+
+  V44 — Multi-Token Vaults
+    - 1. один юзер может открыть ANCR-сейф и USDT-сейф
+    - 2. нельзя открыть второй сейф с тем же токеном
+    - 3. перевод сейфа на юзера, у которого нет такого токена → создаётся новый сейф
+    - 4. перевод сейфа на юзера, у которого уже есть такой токен → revert или депозит (по реализации)
+    - 5. после закрытия сейфа activeVaultIdByToken сбрасывается в 0
+    - 6. deposit/withdraw работает с activeVaultIdByToken (не ломает старую логику)
+    - 7. setTimelock/setVoluntaryLock применяются к правильному сейфу (по токену)
+    - 8. earlyClose/recoverToSafe/emergencyAny работают с multi-token (выбор правильного сейфа)
+    - 9. rotateCodes работает с multi-token
+    - 10. pendingIncomingTransfer учитывает токен (не даёт создать два pending на один токен)
+
+  V44 — Global Emergency
+    - 1. setGlobalEmergency задаёт адрес один раз
+    - 2. повторный вызов setGlobalEmergency → revert EmergencyAlreadySet
+    - 3. openVault без globalEmergency → revert NoEmergencySet
+    - 4. openVault с globalEmergency → emergencyAddress == globalEmergency[user]
+    - 5. getGlobalEmergency возвращает правильный адрес
+
+  V44 — Panic Withdraw
+    - 1. panicWithdraw отправляет средства на globalEmergency
+    - 2. panicWithdraw берёт комиссию 20%
+    - 3. panicWithdraw работает без кодов
+    - 4. panicWithdraw работает при requiresCodeRotation == true
+    - 5. panicWithdraw НЕ работает при voluntaryLock
+    - 6. panicWithdraw закрывает сейф (status = CLOSED)
+    - 7. panicWithdraw работает для любого vault'а юзера
+    - 8. panicWithdraw с FOT-токеном работает корректно
+    - 9. panicWithdraw эмитит PanicWithdraw
+    - 10. нельзя вызвать panicWithdraw для несуществующего сейфа
+
+  V44 — Secure Transfer
+    - 1. initSecureTransfer создаёт pending-перевод
+    - 2. initSecureTransfer замораживает сейф отправителя
+    - 3. confirmSecureTransfer с верным confirmCode активирует сейф у получателя
+    - 4. confirmSecureTransfer с неверным кодом увеличивает failCount
+    - 5. confirmSecureTransfer после 3 неверных попыток → EXPIRED, сейф возвращается
+    - 6. confirmSecureTransfer не работает после 48 часов
+    - 7. cancelSecureTransfer отправителем возвращает сейф
+    - 8. cancelSecureTransfer НЕ может вызвать получатель
+    - 9. reclaimExpiredTransfer может вызвать кто угодно после 48 часов
+    - 10. anti-brute: нельзя вызывать confirm чаще 1 раза в минуту
+    - 11. нельзя создать два pending на один токен для одного получателя
+    - 12. deposit/withdraw НЕ работают пока сейф FROZEN_FOR_TRANSFER
+    - 13. earlyClose НЕ работает пока сейф FROZEN_FOR_TRANSFER
+    - 14. события эмитятся
+    - 15. полный хэппи-путь: init → confirm → сейф у получателя работает
+
+
+  787 passing (12s)
+  40 pending
+
