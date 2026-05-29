@@ -100,3 +100,12 @@ OpenZeppelin's audit of **Across Protocol** (Feb–Mar 2026, Solidity) covers a 
 - Coverage: CREATE2 counterfactual deposits, EIP-712 signatures, Merkle proofs, Tron compatibility
 
 AnchorVault V45's EIP-712 design preempts this class of replay by binding every signature to a unique vault, nonce, and operation typehash.
+
+## 14. Confidential Contracts Library Audit (FHEVM)
+OpenZeppelin's audit of **Confidential Contracts** (Feb–Mar 2026, Solidity) demonstrates their rigor in FHE-based tokenization:
+- **0 Critical**, **0 High**, **1 Medium**, **3 Low** issues identified
+- All 7 findings resolved
+- Medium: missing reentrancy guard on `dispatchBatchCallback` → validates our `ReentrancyGuardTransient` choice
+- Coverage: ERC-7984 confidential tokens, FHEVM wrappers, batcher patterns
+
+AnchorVault V45 already applies the recommended transient reentrancy guard and explicit invariant documentation.
