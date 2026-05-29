@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -37,7 +37,7 @@ interface IBurnable {
  *
  * Vault status: 0=ACTIVE, 1=FROZEN_FOR_TRANSFER, 2=CLOSED.
  */
-contract AnchorVaultV45 is ReentrancyGuard, EIP712 {
+contract AnchorVaultV45 is ReentrancyGuardTransient, EIP712 {
     using SafeERC20 for IERC20;
 
     // ─── ERRORS ─────────────────────────────────────────────
