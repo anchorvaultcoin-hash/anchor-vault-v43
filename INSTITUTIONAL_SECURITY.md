@@ -136,3 +136,12 @@ OpenZeppelin's audit of **Confidential Contracts v0.3** (Oct 2025, Solidity) clo
 - Coverage: ERC-7984 RWA, freezable, observer access, omnibus transfers, FHE safe math
 
 AnchorVault V45's accounting (`_safeReceive`, `lockedPrincipal`) ensures every token operation returns a verified balance, preventing silent failures.
+
+## 18. Confidential Tokens v0.2 Audit (ERC-7984)
+OpenZeppelin's audit of **Confidential Contracts v0.2** (May 2025, Solidity) completes our benchmark series:
+- **0 Critical**, **0 High**, **0 Medium**, **4 Low** issues identified
+- 7 of 9 findings resolved
+- Low: misleading pragma, deviation from ERC-1363 spec, redundant ACL allowances
+- Coverage: ERC-7984 confidential tokens, FHEVM integration, ERC-20 wrapper, async decryption
+
+AnchorVault V45 avoids all FHE-specific risks; its ERC-20 handling (`_safeReceive`, `SafeERC20`, `ReentrancyGuardTransient`) exceeds the security baseline established here.
