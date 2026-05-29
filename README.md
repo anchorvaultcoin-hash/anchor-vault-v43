@@ -237,3 +237,15 @@ MIT. See SPDX headers in source files.
 - For recovery operations, use a **hardware wallet** with a separate seed, not linked to the owner's EOA.
 - Regularly monitor the `AuthKeysRotated` event for unauthorized key changes.
 - Run `./security-check.sh` before each commit.
+
+## Institutional Readiness
+AnchorVault V45 is designed to meet the security and operational requirements of regulated financial institutions:
+- **Separation of duties:** `creator` (admin) vs `guardian` (pause-only)
+- **Timelocked withdrawals:** 7-day delay for admin fee withdrawals
+- **Immutable core:** No upgradeable proxies, eliminating storage collision risks
+- **Cold wallet emergency:** `globalEmergency` with 7-day change timelock and cancel option
+- **Key security:** Offline EIP-712 signing keys, never exposed on-chain
+- **Continuous monitoring:** GitHub Actions CI/CD + Slither static analysis
+- **Audit-ready:** Full test suite (18/18), fuzzed invariants, detailed documentation
+
+👉 See `INSTITUTIONAL_SECURITY.md` for a complete due diligence questionnaire.
