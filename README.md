@@ -229,3 +229,11 @@ immutably in the constructor; cannot be removed.
 ## License
 
 MIT. See SPDX headers in source files.
+
+## Operational Security
+
+- **Auth keys** (`mainAuthKey`, `recoveryAuthKey`) must be generated and stored on **air‑gapped machines**.
+- Transactions are signed offline and submitted by a separate hot wallet.
+- For recovery operations, use a **hardware wallet** with a separate seed, not linked to the owner's EOA.
+- Regularly monitor the `AuthKeysRotated` event for unauthorized key changes.
+- Run `./security-check.sh` before each commit.
