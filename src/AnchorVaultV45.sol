@@ -205,6 +205,7 @@ contract AnchorVaultV45 is ReentrancyGuardTransient, EIP712 {
     uint256 public constant MAX_WELCOME_BONUS = MIN_DEPOSIT / 2;
 
     uint256 public constant SECURE_TRANSFER_TIMEOUT = 48 hours;
+    uint256 public constant MAX_SIGNATURE_DEADLINE = 24 hours;
 
     // ─── EIP-712 TYPEHASHES ─────────────────────────────────
     bytes32 private constant WITHDRAW_TYPEHASH =
@@ -309,6 +310,7 @@ contract AnchorVaultV45 is ReentrancyGuardTransient, EIP712 {
     // slither-disable-next-line timestamp
     function _checkMainSig(Vault storage v, bytes32 structHash, uint256 deadline, bytes calldata sig) internal {
         if (block.timestamp > deadline) revert SignatureExpired();
+        if (deadline > block.timestamp + MAX_SIGNATURE_DEADLINE) revert SignatureExpired();
         if (block.timestamp < v.voluntaryLockUntil) revert Locked();
         if (ECDSA.recover(_hashTypedDataV4(structHash), sig) != v.mainAuthKey) revert BadSignature();
         unchecked { v.nonce += 1; }
@@ -317,6 +319,7 @@ contract AnchorVaultV45 is ReentrancyGuardTransient, EIP712 {
     // slither-disable-next-line timestamp
     function _checkRecoverySig(Vault storage v, bytes32 structHash, uint256 deadline, bytes calldata sig) internal {
         if (block.timestamp > deadline) revert SignatureExpired();
+        if (deadline > block.timestamp + MAX_SIGNATURE_DEADLINE) revert SignatureExpired();
         if (block.timestamp < v.voluntaryLockUntil) revert Locked();
         if (ECDSA.recover(_hashTypedDataV4(structHash), sig) != v.recoveryAuthKey) revert BadSignature();
         unchecked { v.nonce += 1; }

@@ -218,7 +218,7 @@ contract AnchorVaultV45Test is Test {
     function test_Withdraw_AfterTimelock() public {
         uint256 vid = _openAlice(100 ether, 2);
         (uint64 nonce,,) = vault.getVaultAuth(alice, vid);
-        uint256 dl = block.timestamp + 100 hours;
+        uint256 dl = block.timestamp + 1 hours;
         bytes32 sh = keccak256(abi.encode(SET_TIMELOCK_TYPEHASH, alice, vid, uint256(48), nonce, dl));
         bytes memory sig = _sign(aMainPk, sh);
         vm.prank(alice);
@@ -227,11 +227,12 @@ contract AnchorVaultV45Test is Test {
         vm.warp(block.timestamp + 49 hours);
 
         (nonce,,) = vault.getVaultAuth(alice, vid);
-        bytes32 wsh = keccak256(abi.encode(WITHDRAW_TYPEHASH, alice, vid, uint256(20 ether), alice, nonce, dl));
+        uint256 withdrawDeadline = block.timestamp + 1 hours;
+        bytes32 wsh = keccak256(abi.encode(WITHDRAW_TYPEHASH, alice, vid, uint256(20 ether), alice, nonce, withdrawDeadline));
         bytes memory wsig = _sign(aMainPk, wsh);
         uint256 balBefore = ancr.balanceOf(alice);
         vm.prank(alice);
-        vault.withdrawFromVault(vid, 20 ether, alice, dl, wsig);
+        vault.withdrawFromVault(vid, 20 ether, alice, withdrawDeadline, wsig);
         assertEq(ancr.balanceOf(alice) - balBefore, 19.9 ether);
     }
 
