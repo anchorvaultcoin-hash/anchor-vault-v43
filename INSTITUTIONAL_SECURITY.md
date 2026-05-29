@@ -42,3 +42,10 @@ AnchorVault V45 is a non-custodial, multi-asset vault with EIP-712 dual-key auth
 4. *Is there a bug bounty program?* Planned post-audit (Immunefi).
 
 *For a complete technical risk assessment, contact the project team.*
+
+## 7. Audit Standards & Benchmarks
+Our security practices align with the methodology used by **OpenZeppelin**, the industry leader in blockchain security.  
+OpenZeppelin has conducted **over 1,000 audits** and identified **more than 10,000 vulnerabilities** across DeFi protocols, bridges, oracles, and tokenization platforms.  
+Their severity classification (Critical → High → Medium → Low → Note) and focus on **on-chain + operational risks** serve as our benchmark.
+
+*Example: OpenZeppelin's recent diff audit of the Open Intents Framework (April 2026) found 0 critical/high issues, 1 medium, and 4 low — demonstrating the level of scrutiny we expect and welcome for AnchorVault V45.*
