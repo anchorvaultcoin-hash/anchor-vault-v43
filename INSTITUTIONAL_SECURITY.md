@@ -145,3 +145,12 @@ OpenZeppelin's audit of **Confidential Contracts v0.2** (May 2025, Solidity) com
 - Coverage: ERC-7984 confidential tokens, FHEVM integration, ERC-20 wrapper, async decryption
 
 AnchorVault V45 avoids all FHE-specific risks; its ERC-20 handling (`_safeReceive`, `SafeERC20`, `ReentrancyGuardTransient`) exceeds the security baseline established here.
+
+## 19. Cross-Chain Broadcaster Audit (OIF/ERC-7888)
+OpenZeppelin's audit of **OIF Broadcaster** (Feb 2026, Solidity) covers multi-chain proof verification:
+- **0 Critical**, **3 High**, **1 Medium**, **6 Low** issues identified
+- 16 of 19 findings resolved
+- High: incorrect storage slots, wrong address returns, incompatible proof schemes across L2s
+- Coverage: ERC-7888 storage proofs, 6 L2 chain pairs (Arbitrum, Optimism, Scroll, Linea, Taiko, ZKsync)
+
+AnchorVault V45's EIP-712 domain separator and MAX_SIGNATURE_DEADLINE prevent cross-chain replay and proof staleness, directly addressing the core risks identified here.
