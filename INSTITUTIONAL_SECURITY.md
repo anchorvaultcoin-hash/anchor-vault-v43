@@ -74,3 +74,12 @@ OpenZeppelin's audit of **Wenia TokenizationW** (December 2025, Solidity/UUPS) a
 - Coverage: UUPS upgradeability, EIP-7201 namespaced storage, Chainlink proof-of-reserve, role-based access control
 
 AnchorVault V45 shares the same security priorities and is prepared for this level of tokenization-focused audit.
+
+## 11. Fiat-Backed Tokenization Audit (EfixDIToken)
+OpenZeppelin's audit of **EfixDIToken** (March 2026, Solidity) for Hausbank covers a fiat-backed tokenized deposit fund:
+- **0 Critical**, **1 High**, **1 Medium**, **5 Low** issues identified
+- **8 Notes** addressed; all 15 findings resolved
+- High-severity finding: vault/token balance sync — directly validates our `lockedPrincipal` invariant
+- Coverage: UUPS, EIP-7201, Chainlink PoR, role-based access, pause, emergency withdrawal
+
+AnchorVault V45's architecture preempts the same class of vault-token divergence via `_safeReceive` and continuous fee accounting.
