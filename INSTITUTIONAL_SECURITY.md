@@ -127,3 +127,12 @@ OpenZeppelin's audit of **Miden Multisig Client** (Feb 2026, Rust/TypeScript) re
 - Coverage: multi-signature workflows, PSM coordination, dual Rust/TS implementations
 
 AnchorVault V45's architecture eliminates blind-signing by binding every signature to a complete, self-verifying structHash.
+
+## 17. Confidential Tokens v0.3 Audit (ERC-7984)
+OpenZeppelin's audit of **Confidential Contracts v0.3** (Oct 2025, Solidity) closes our benchmark series:
+- **0 Critical**, **0 High**, **1 Medium**, **2 Low** issues identified
+- 12 of 13 findings resolved
+- Medium: missing ACL allowance on agent mint/burn returns → validates our `_safeReceive` pattern
+- Coverage: ERC-7984 RWA, freezable, observer access, omnibus transfers, FHE safe math
+
+AnchorVault V45's accounting (`_safeReceive`, `lockedPrincipal`) ensures every token operation returns a verified balance, preventing silent failures.
