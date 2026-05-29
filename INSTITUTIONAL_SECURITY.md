@@ -49,3 +49,12 @@ OpenZeppelin has conducted **over 1,000 audits** and identified **more than 10,0
 Their severity classification (Critical → High → Medium → Low → Note) and focus on **on-chain + operational risks** serve as our benchmark.
 
 *Example: OpenZeppelin's recent diff audit of the Open Intents Framework (April 2026) found 0 critical/high issues, 1 medium, and 4 low — demonstrating the level of scrutiny we expect and welcome for AnchorVault V45.*
+
+## 8. Audit Rigor Example
+OpenZeppelin's audit of **Token Ops FHE** (March–April 2026) demonstrates the depth of analysis we expect:
+- **0 Critical / 0 High** severity findings
+- **2 Medium** and **7 Low** issues identified, all resolved
+- **7 Notes** addressed, plus **2 client-reported issues** fixed
+- Full coverage of Solidity, FHEVM, access control, and rounding errors
+
+AnchorVault V45 is built with the same security-first mindset and is ready for an equally rigorous external audit.
