@@ -109,3 +109,12 @@ OpenZeppelin's audit of **Confidential Contracts** (Feb–Mar 2026, Solidity) de
 - Coverage: ERC-7984 confidential tokens, FHEVM wrappers, batcher patterns
 
 AnchorVault V45 already applies the recommended transient reentrancy guard and explicit invariant documentation.
+
+## 15. Off-Chain Infrastructure Audit (Miden PSM)
+OpenZeppelin's penetration test of **Private State Manager** (Feb 2026, Rust/TypeScript) shows their off-chain security depth:
+- **0 Critical**, **1 High**, **1 Medium**, **2 Low** issues identified
+- All 4 findings resolved
+- High: path traversal in file storage → arbitrary proposal modification
+- Coverage: API auth (Falcon signatures), rate limiting, multi-party coordination, PostgreSQL
+
+AnchorVault V45's operational security docs (SECURITY.md, INSTITUTIONAL_SECURITY.md) align with this infrastructure-level scrutiny.
