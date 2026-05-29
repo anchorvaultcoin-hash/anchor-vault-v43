@@ -83,3 +83,12 @@ OpenZeppelin's audit of **EfixDIToken** (March 2026, Solidity) for Hausbank cove
 - Coverage: UUPS, EIP-7201, Chainlink PoR, role-based access, pause, emergency withdrawal
 
 AnchorVault V45's architecture preempts the same class of vault-token divergence via `_safeReceive` and continuous fee accounting.
+
+## 12. Zero-Knowledge Privacy Pool Audit (PrivacyBoost)
+OpenZeppelin's audit of **PrivacyBoost** (Feb–Mar 2026, Solidity + Go/gnark) demonstrates their depth in ZK and privacy protocols:
+- **1 Critical**, **0 High**, **6 Medium**, **13 Low** issues identified
+- 27 of 33 findings resolved; partial mitigations for remaining
+- Critical: tree number range constraint bug → permanent protocol halt after 16 rebases
+- Coverage: ZK circuits (Groth16), UTXO notes, EdDSA/BabyJubJub, TEE relayers, censorship resistance
+
+AnchorVault V45 shares the commitment to rigorous verification, even in non-ZK contexts, and is prepared for equally thorough scrutiny.
