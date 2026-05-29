@@ -163,3 +163,12 @@ OpenZeppelin's audit of **OIF Block Hash Pusher** (Feb 2026, Solidity) covers cr
 - Coverage: 4 L2 chains (Linea, Scroll, ZKsync, Optimism), ring buffers, bridge security assumptions
 
 AnchorVault V45's `_safeReceive` and strict EIP-712 parameter validation reflect the same "verify all inputs" philosophy recommended here.
+
+## 21. Cross-Chain Bridge Audit (Across Protocol v2)
+OpenZeppelin's audit of **Across Protocol** (Jan 2026, Solidity/Rust) covers CCTP and OFT cross-chain flows:
+- **0 Critical**, **0 High**, **2 Medium**, **6 Low** issues identified
+- 9 of 11 findings resolved
+- Medium: unvalidated signatures allowed skipping user actions; missing deadline enforcement on destination chain
+- Coverage: SVM/EVM bridges, HyperCore, DonationBox, account creation sponsorship
+
+AnchorVault V45's strict EIP-712 structHash binding and MAX_SIGNATURE_DEADLINE prevent signature validation bypass and ensure timely execution across all operations.
