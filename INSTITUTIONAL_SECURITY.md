@@ -154,3 +154,12 @@ OpenZeppelin's audit of **OIF Broadcaster** (Feb 2026, Solidity) covers multi-ch
 - Coverage: ERC-7888 storage proofs, 6 L2 chain pairs (Arbitrum, Optimism, Scroll, Linea, Taiko, ZKsync)
 
 AnchorVault V45's EIP-712 domain separator and MAX_SIGNATURE_DEADLINE prevent cross-chain replay and proof staleness, directly addressing the core risks identified here.
+
+## 20. Block Hash Pusher Audit (OIF L1→L2)
+OpenZeppelin's audit of **OIF Block Hash Pusher** (Feb 2026, Solidity) covers cross-chain block hash propagation:
+- **0 Critical**, **0 High**, **0 Medium**, **4 Low** issues identified
+- 8 of 10 findings resolved
+- Low: msg.value mismatch in Linea, misleading events on skipped batches, unbounded batch sizes
+- Coverage: 4 L2 chains (Linea, Scroll, ZKsync, Optimism), ring buffers, bridge security assumptions
+
+AnchorVault V45's `_safeReceive` and strict EIP-712 parameter validation reflect the same "verify all inputs" philosophy recommended here.
