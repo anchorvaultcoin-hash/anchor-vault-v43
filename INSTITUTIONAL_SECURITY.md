@@ -66,3 +66,11 @@ OpenZeppelin's audit of **Stellar Contracts** (March 2026, Rust/Soroban) further
 - Deep coverage of smart accounts, governance, math, access control, and DKIM registry
 
 AnchorVault V45 aspires to the same depth of scrutiny, regardless of the target chain or language.
+
+## 10. Tokenization Audit Benchmark
+OpenZeppelin's audit of **Wenia TokenizationW** (December 2025, Solidity/UUPS) aligns closely with our domain:
+- **0 Critical**, **1 High**, **1 Medium**, **1 Low** issues identified
+- **10 Notes** addressed; all 13 findings resolved
+- Coverage: UUPS upgradeability, EIP-7201 namespaced storage, Chainlink proof-of-reserve, role-based access control
+
+AnchorVault V45 shares the same security priorities and is prepared for this level of tokenization-focused audit.
