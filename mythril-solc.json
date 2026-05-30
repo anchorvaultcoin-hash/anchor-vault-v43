@@ -1,5 +1,0 @@
-{
-  "remappings": ["@openzeppelin/=node_modules/@openzeppelin/"],
-  "optimizer": { "enabled": true, "runs": 200 },
-  "viaIR": true
-}
